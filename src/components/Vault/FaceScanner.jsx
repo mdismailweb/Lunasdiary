@@ -11,6 +11,7 @@ export default function FaceScanner({ folderId, images, onComplete, onCancel }) 
     const [progress, setProgress] = useState(0);
     const [discoveryCount, setDiscoveryCount] = useState(0);
     const [batchesChecked, setBatchesChecked] = useState(0);
+    const [faceDetectedCount, setFaceDetectedCount] = useState(0);
     const [log, setLog] = useState('Initializing face-api.js...');
 
 
@@ -39,7 +40,14 @@ export default function FaceScanner({ folderId, images, onComplete, onCancel }) 
         return () => { abortRef.current = true; };
     }, []);
 
-    const startQuickScan = () => startScan(images);
+    const startQuickScan = () => {
+        const upgraded = (images || []).map(img => ({
+            ...img,
+            src: img.src?.replace('sz=w300', 'sz=w800') || img.src
+        }));
+        startScan(upgraded);
+    };
+
 
     const startDeepScan = async () => {
         setStatus('fetching');
@@ -66,7 +74,9 @@ export default function FaceScanner({ folderId, images, onComplete, onCancel }) 
 
 
                 const formatted = items.map(item => ({
-                    id: item.id, src: item.thumbnailLink, width: 400, height: 300,
+                    id: item.id,
+                    src: item.thumbnailLink ? item.thumbnailLink.replace('sz=w300', 'sz=w800') : null,
+                    width: 400, height: 300,
                     largeSrc: item.viewLink || item.thumbnailLink,
                     title: item.name, type: item.mimeType?.startsWith('video/') ? 'video' : 'image',
                 }));
@@ -96,11 +106,12 @@ export default function FaceScanner({ folderId, images, onComplete, onCancel }) 
             if (abortRef.current) return;
             try {
                 const img = await faceapi.fetchImage(imgData.src);
-                const detections = await faceapi.detectAllFaces(img)
+                const detections = await faceapi.detectAllFaces(img, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.4 }))
                     .withFaceLandmarks()
                     .withFaceDescriptors();
 
                 if (detections.length > 0) {
+                    setFaceDetectedCount(prev => prev + detections.length);
                     detections.forEach(det => {
                         descriptorsFound.push({
                             imageId: imgData.id,
@@ -196,7 +207,9 @@ export default function FaceScanner({ folderId, images, onComplete, onCancel }) 
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                         <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            {status === 'fetching' ? `Discovery Phase (${discoveryCount} found in ${batchesChecked} batches)...` : status === 'clustering' ? 'Grouping Phase...' : `${progress}% SCANNED`}
+                            {status === 'fetching' ? `Discovery Phase (${discoveryCount} found in ${batchesChecked} batches)...` :
+                                status === 'scanning' ? `Scanning Phase (${faceDetectedCount} faces detected)...` :
+                                    status === 'clustering' ? 'Grouping Phase...' : `${progress}% SCANNED`}
                         </span>
 
                     </div>
