@@ -129,17 +129,20 @@ export const getStreakLogs = (streak_id) => _call('getStreakLogs', { streak_id }
 
 // ─── Reading List ───────────────────────────────────────────
 export const getReadingList = () => _call('getReadingList');
-export const saveReadingItem = (params) => _call('saveReadingItem', params);
+export const saveReadingList = (params) => _call('saveReadingItem', params);
+export const saveReadingItem = saveReadingList;
 export const deleteReadingItem = (id) => _call('deleteReadingItem', { id });
 
 // ─── Watchlist ──────────────────────────────────────────────
 export const getWatchlist = () => _call('getWatchlist');
-export const saveWatchItem = (params) => _call('saveWatchItem', params);
+export const saveWatchlist = (params) => _call('saveWatchItem', params);
+export const saveWatchItem = saveWatchlist;
 export const deleteWatchItem = (id) => _call('deleteWatchItem', { id });
 
 // ─── Finance ────────────────────────────────────────────────
 export const getFinance = (params) => _call('getFinance', params);
-export const saveFinanceItem = (params) => _call('saveFinanceItem', params);
+export const saveFinance = (params) => _call('saveFinanceItem', params);
+export const saveFinanceItem = saveFinance;
 export const deleteFinanceItem = (id) => _call('deleteFinanceItem', { id });
 
 // ─── Bookmarks ──────────────────────────────────────────────
