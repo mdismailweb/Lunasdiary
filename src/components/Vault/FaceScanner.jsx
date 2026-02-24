@@ -10,7 +10,9 @@ export default function FaceScanner({ folderId, images, onComplete, onCancel }) 
     const [status, setStatus] = useState('loading'); // loading | ready | fetching | scanning | clustering | complete
     const [progress, setProgress] = useState(0);
     const [discoveryCount, setDiscoveryCount] = useState(0);
+    const [batchesChecked, setBatchesChecked] = useState(0);
     const [log, setLog] = useState('Initializing face-api.js...');
+
 
     const [results, setResults] = useState(null);
     const abortRef = useRef(false);
@@ -50,11 +52,18 @@ export default function FaceScanner({ folderId, images, onComplete, onCancel }) 
             do {
                 if (abortRef.current) return;
                 batchCount++;
+                setBatchesChecked(batchCount);
                 setLog(`Fetching batch ${batchCount}... (${allMedia.length} found)`);
 
                 const res = await getVaultMedia(folderId, nextToken);
-                const items = res?.data?.items || res?.items || (Array.isArray(res) ? res : []);
-                nextToken = res?.data?.continuationToken || res?.continuationToken || null;
+                if (!res || res.success === false) {
+                    throw new Error(res?.error || 'Failed to fetch media from Drive');
+                }
+
+                const data = res.data || {};
+                const items = data.items || [];
+                nextToken = data.continuationToken || null;
+
 
                 const formatted = items.map(item => ({
                     id: item.id, src: item.thumbnailLink, width: 400, height: 300,
@@ -187,8 +196,9 @@ export default function FaceScanner({ folderId, images, onComplete, onCancel }) 
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                         <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            {status === 'fetching' ? `Discovery Phase (${discoveryCount} found)...` : status === 'clustering' ? 'Grouping Phase...' : `${progress}% SCANNED`}
+                            {status === 'fetching' ? `Discovery Phase (${discoveryCount} found in ${batchesChecked} batches)...` : status === 'clustering' ? 'Grouping Phase...' : `${progress}% SCANNED`}
                         </span>
+
                     </div>
 
                 </div>
