@@ -9,7 +9,9 @@ import { saveFaceGroups, getVaultMedia } from '../../services/api';
 export default function FaceScanner({ folderId, images, onComplete, onCancel }) {
     const [status, setStatus] = useState('loading'); // loading | ready | fetching | scanning | clustering | complete
     const [progress, setProgress] = useState(0);
+    const [discoveryCount, setDiscoveryCount] = useState(0);
     const [log, setLog] = useState('Initializing face-api.js...');
+
     const [results, setResults] = useState(null);
     const abortRef = useRef(false);
 
@@ -61,7 +63,9 @@ export default function FaceScanner({ folderId, images, onComplete, onCancel }) 
                 }));
 
                 allMedia = [...allMedia, ...formatted];
+                setDiscoveryCount(allMedia.length);
             } while (nextToken);
+
 
             setLog(`Found ${allMedia.length} images. Starting scan...`);
             startScan(allMedia);
@@ -172,9 +176,10 @@ export default function FaceScanner({ folderId, images, onComplete, onCancel }) 
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                         <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            {status === 'fetching' ? 'Discovery Phase...' : status === 'clustering' ? 'Grouping Phase...' : `${progress}% SCANNED`}
+                            {status === 'fetching' ? `Discovery Phase (${discoveryCount} found)...` : status === 'clustering' ? 'Grouping Phase...' : `${progress}% SCANNED`}
                         </span>
                     </div>
+
                 </div>
             )}
 
