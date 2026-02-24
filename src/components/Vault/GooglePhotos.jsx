@@ -221,18 +221,30 @@ export default function GooglePhotos({ activeTab, folders, onTabChange }) {
         fetchFolder(folder);
     }, [activeTab, folders]);
 
-    const fetchFolder = async (folder) => {
+    const fetchFolder = async (folder, isLoadMore = false) => {
         setLoading(true); setError(null);
+        const currentData = folderCache[folder.folderId] || { items: [], nextToken: null };
+
         try {
-            const res = await getVaultMedia(folder.folderId);
+            const res = await getVaultMedia(folder.folderId, isLoadMore ? currentData.nextToken : null);
             const raw = res?.data?.items || res?.items || (Array.isArray(res) ? res : []);
+            const nextToken = res?.data?.continuationToken || res?.continuationToken || null;
+
             const formatted = raw.map(item => ({
                 id: item.id, src: item.thumbnailLink, width: 400, height: 300,
                 largeSrc: item.viewLink || item.thumbnailLink, videoSrc: item.viewLink,
                 title: item.name, type: item.mimeType?.startsWith('video/') ? 'video' : 'image',
             }));
-            setFolderCache(c => ({ ...c, [folder.folderId]: formatted }));
-        } catch {
+
+            setFolderCache(c => ({
+                ...c,
+                [folder.folderId]: {
+                    items: isLoadMore ? [...currentData.items, ...formatted] : formatted,
+                    nextToken: nextToken
+                }
+            }));
+        } catch (err) {
+            console.error('Vault fetch error:', err);
             setError('Could not load folder. Make sure it\'s shared as "Anyone with the link".');
         } finally { setLoading(false); }
     };
@@ -289,31 +301,51 @@ export default function GooglePhotos({ activeTab, folders, onTabChange }) {
 
     const folder = folders?.find(f => f.id === activeTab);
     if (!folder) return null;
-    const items = folderCache[folder.folderId];
+    const folderData = folderCache[folder.folderId];
+    const items = folderData?.items || [];
+    const hasMore = !!folderData?.nextToken;
 
-    if (loading && !items) return (
+    if (loading && items.length === 0) return (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
             {[...Array(8)].map((_, i) => <SkeletonCard key={i} />)}
         </div>
     );
-    if (error) return (
+    if (error && items.length === 0) return (
         <div className="empty-state">
             <div className="empty-emoji">⚠️</div><p>{error}</p>
             <button className="btn btn-primary" style={{ marginTop: '1rem' }} onClick={() => { setFolderCache(c => { const n = { ...c }; delete n[folder.folderId]; return n; }); fetchFolder(folder); }}>Retry</button>
         </div>
     );
-    if (!items || items.length === 0) return (
+    if (!loading && items.length === 0) return (
         <div className="empty-state"><div className="empty-emoji">🖼️</div><p>No media found in this folder.</p></div>
     );
 
     return (
-        <div>
+        <div style={{ paddingBottom: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{items.length} items · {folder.name}</p>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    {items.length} items {hasMore ? '(more available)' : ''} · {folder.name}
+                </p>
                 <button className="btn btn-ghost btn-sm" onClick={() => { setFolderCache(c => { const n = { ...c }; delete n[folder.folderId]; return n; }); fetchFolder(folder); }} disabled={loading}>🔄</button>
             </div>
+
             <MediaGrid items={items} likedIds={likedIds} onLike={handleLike} onOpen={(i) => { setLightboxItems(items); setLightboxIndex(i); }} />
+
+            {hasMore && (
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2.5rem' }}>
+                    <button
+                        className="btn btn-primary"
+                        onClick={() => fetchFolder(folder, true)}
+                        disabled={loading}
+                        style={{ paddingLeft: '2.5rem', paddingRight: '2.5rem' }}
+                    >
+                        {loading ? 'Loading...' : 'Load More Images'}
+                    </button>
+                </div>
+            )}
+
             <VaultLightbox items={lightboxItems} index={lightboxIndex} onClose={() => setLightboxIndex(-1)} likedIds={likedIds} onLike={handleLike} />
         </div>
     );
 }
+

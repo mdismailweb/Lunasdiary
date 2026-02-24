@@ -89,7 +89,7 @@ async function _rawCall(action, params = {}) {
     return res.json();
 }
 
-export const getVaultMedia = (folderId) => _rawCall('getVaultMedia', { folderId });
+export const getVaultMedia = (folderId, continuationToken) => _rawCall('getVaultMedia', { folderId, continuationToken });
 export const getVaultFolders = () => _rawCall('getVaultFolders');
 export const addVaultFolder = (name, folderId) => _rawCall('addVaultFolder', { name, folderId });
 export const removeVaultFolder = (id) => _rawCall('removeVaultFolder', { id });

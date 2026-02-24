@@ -1484,23 +1484,32 @@ function saveYTDismissed(params) {
 
 function getVaultMedia(params) {
   var folderId = params.folderId;
-  if (!folderId) throw new Error('folderId required');
+  var token = params.continuationToken;
+  var batchSize = 500; // Process 500 files per batch
   
-  var folder;
-  try {
-    folder = DriveApp.getFolderById(folderId);
-  } catch (e) {
-    throw new Error('Folder not found or access denied. Ensure folder is set to "Anyone with the link can view". Error: ' + e.message);
+  var files;
+  var folderName = '';
+  
+  if (token) {
+    files = DriveApp.continueFileIterator(token);
+  } else {
+    if (!folderId) throw new Error('folderId required');
+    try {
+      var folder = DriveApp.getFolderById(folderId);
+      folderName = folder.getName();
+      files = folder.getFiles();
+    } catch (e) {
+      throw new Error('Folder not found or access denied. Ensure folder is set to "Anyone with the link can view". Error: ' + e.message);
+    }
   }
   
-  var files = folder.getFiles();
   var media = [];
   var totalChecked = 0;
   
-  while (files.hasNext()) {
+  while (files.hasNext() && totalChecked < batchSize) {
     totalChecked++;
     var file = files.next();
-    var mime = file.getMimeType();
+    var mime = file.getMimeType() || '';
     
     // Check for common image and video formats
     if (mime.indexOf('image/') !== -1 || mime.indexOf('video/') !== -1) {
@@ -1511,7 +1520,6 @@ function getVaultMedia(params) {
         id: id,
         name: file.getName(),
         mimeType: mime,
-        // Confirmed working endpoint for public Drive files
         thumbnailLink: 'https://drive.google.com/thumbnail?id=' + id + '&sz=w600',
         viewLink: isImage 
           ? 'https://drive.google.com/thumbnail?id=' + id + '&sz=w2000'
@@ -1519,23 +1527,25 @@ function getVaultMedia(params) {
         createdTime: file.getDateCreated() ? file.getDateCreated().toISOString() : ''
       });
     }
-    
-    // Safety break to prevent timeout on massive folders
-    if (totalChecked > 1000) break;
   }
   
+  // Sort this batch
   media.sort(function(a, b) { 
     if (!a.createdTime) return 1;
     if (!b.createdTime) return -1;
     return b.createdTime.localeCompare(a.createdTime); 
   });
   
+  var nextToken = files.hasNext() ? files.getContinuationToken() : null;
+  
   return {
     items: media,
-    folderName: folder.getName(),
+    continuationToken: nextToken,
+    folderName: folderName,
     diagnostics: {
-      totalFound: totalChecked,
-      mediaCount: media.length
+      checkedInBatch: totalChecked,
+      mediaInBatch: media.length,
+      hasMore: !!nextToken
     }
   };
 }
