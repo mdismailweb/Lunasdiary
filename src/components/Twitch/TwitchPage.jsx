@@ -40,17 +40,12 @@ function TwitchVideoCard({ item, type, onPlay, onSave, onDismiss }) {
     const getThumbnail = (url) => {
         if (!url) return 'https://static-cdn.jtvnw.net/ttv-static/404_preview-400x225.jpg';
 
-        // Standardize placeholders
-        const processed = url
-            .replace(/\{width\}/g, '400')
-            .replace(/\{height\}/g, '225')
-            .replace(/%7Bwidth%7D/g, '400')
-            .replace(/%7Bheight%7D/g, '225');
-
-        // Log a sample to help debug
-        if (Math.random() < 0.05) console.log('[Twitch] Sample Thumbnail:', processed);
-
-        return processed;
+        // Twitch VODs often use: %{width}x%{height}. We catch {width}, %{width}, and encoded %7Bwidth%7D
+        return url
+            .replace(/%?\{width\}/g, '400')
+            .replace(/%?\{height\}/g, '225')
+            .replace(/%?%7Bwidth%7D/g, '400')
+            .replace(/%?%7Bheight%7D/g, '225');
     };
 
     return (
