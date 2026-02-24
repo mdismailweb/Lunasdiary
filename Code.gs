@@ -37,6 +37,8 @@ var S = {
   TWITCH_CHANNELS: 'TWITCH_CHANNELS',
   TWITCH_DISMISSED: 'TWITCH_DISMISSED',
   TWITCH_CONFIG: 'TWITCH_CONFIG',
+  SAVED_TWITCH_VIDEOS: 'SAVED_TWITCH_VIDEOS',
+  TWITCH_DISMISSED: 'TWITCH_DISMISSED',
   LOGS: 'LOGS'
 };
 
@@ -212,6 +214,9 @@ function doPost(e) {
       case 'removeTwitchChannel':  result = removeTwitchChannel(params);    break;
       case 'getTwitchData':        result = getTwitchData(params);          break;
       case 'searchTwitchChannel':  result = searchTwitchChannel(params);    break;
+      case 'getSavedTwitchVideos': result = getSavedTwitchVideos();         break;
+      case 'saveTwitchVideo':      result = saveTwitchVideo(params);        break;
+      case 'saveTwitchDismissed':  result = saveTwitchDismissed(params);    break;
 
       default:
         result = { error: 'Unknown action: ' + action };
@@ -1918,8 +1923,11 @@ function removeTwitchChannel(params) {
 }
 
 function getTwitchData() {
+  initTwitchSync();
   var token = getTwitchAccessToken();
   if (!token) return { error: 'Twitch credentials missing in Settings.' };
+
+  var dismissedIds = getTwitchDismissedIds();
 
   var channels = getTwitchChannels();
   if (channels.length === 0) return { streams: [], videos: [] };
@@ -1959,7 +1967,8 @@ function getTwitchData() {
 
   return {
     streams: streamsData,
-    videos: allVideos
+    videos: allVideos,
+    dismissed: dismissedIds
   };
 }
 
@@ -1994,6 +2003,52 @@ function _initTwitch() {
     var sheet = ss.insertSheet(S.TWITCH_CHANNELS);
     sheet.appendRow(['id', 'login', 'display_name', 'profile_image_url', 'added_at']);
   }
+}
+
+function initTwitchSync() {
+  var ss = _ss();
+  var defs = {};
+  defs[S.SAVED_TWITCH_VIDEOS] = ['video_id', 'title', 'user_name', 'user_id', 'thumbnail_url', 'created_at', 'type', 'url', 'duration', 'saved_at'];
+  defs[S.TWITCH_DISMISSED] = ['item_id', 'dismissed_at'];
+
+  Object.keys(defs).forEach(function(name) {
+    if (!ss.getSheetByName(name)) {
+      var sheet = ss.insertSheet(name);
+      sheet.appendRow(defs[name]);
+      sheet.getRange(1, 1, 1, defs[name].length).setFontWeight('bold');
+    }
+  });
+}
+
+function getSavedTwitchVideos() {
+  initTwitchSync();
+  return _sheetToObjects(S.SAVED_TWITCH_VIDEOS).sort(function(a, b) {
+    return String(b.saved_at).localeCompare(String(a.saved_at));
+  });
+}
+
+function saveTwitchVideo(params) {
+  initTwitchSync();
+  // id could be stream_id or video_id
+  if (_findRow(S.SAVED_TWITCH_VIDEOS, 'video_id', params.video_id) > 0) return { success: true, exists: true };
+  params.saved_at = _now();
+  _appendRow(S.SAVED_TWITCH_VIDEOS, params);
+  return { success: true };
+}
+
+function saveTwitchDismissed(params) {
+  initTwitchSync();
+  if (_findRow(S.TWITCH_DISMISSED, 'item_id', params.item_id) > 0) return { success: true, exists: true };
+  _appendRow(S.TWITCH_DISMISSED, {
+    item_id: params.item_id,
+    dismissed_at: _now()
+  });
+  return { success: true, item_id: params.item_id };
+}
+
+function getTwitchDismissedIds() {
+  initTwitchSync();
+  return _sheetToObjects(S.TWITCH_DISMISSED).map(function(r) { return r.item_id; });
 }
 
 // ── VAULT FACE RECOGNITION ────────────────────────────────────
