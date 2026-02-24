@@ -1485,7 +1485,7 @@ function saveYTDismissed(params) {
 function getVaultMedia(params) {
   var folderId = params.folderId;
   var token = params.continuationToken;
-  var batchSize = 500; // Process 500 files per batch
+  var batchSize = 300; // Snappier initial load
   
   var files;
   var folderName = '';
@@ -1497,9 +1497,11 @@ function getVaultMedia(params) {
     try {
       var folder = DriveApp.getFolderById(folderId);
       folderName = folder.getName();
-      files = folder.getFiles();
+      // Search only for images and videos within the folder
+      var query = "'" + folderId + "' in parents and (mimeType contains 'image/' or mimeType contains 'video/')";
+      files = DriveApp.searchFiles(query);
     } catch (e) {
-      throw new Error('Folder not found or access denied. Ensure folder is set to "Anyone with the link can view". Error: ' + e.message);
+      throw new Error('Folder not found or access denied. Error: ' + e.message);
     }
   }
   
@@ -1507,33 +1509,28 @@ function getVaultMedia(params) {
   var totalChecked = 0;
   
   while (files.hasNext() && totalChecked < batchSize) {
-    totalChecked++;
     var file = files.next();
-    var mime = file.getMimeType() || '';
+    totalChecked++;
     
-    // Check for common image and video formats
-    if (mime.indexOf('image/') !== -1 || mime.indexOf('video/') !== -1) {
-      var isImage = mime.indexOf('image/') !== -1;
-      var id = file.getId();
-      
-      media.push({
-        id: id,
-        name: file.getName(),
-        mimeType: mime,
-        thumbnailLink: 'https://drive.google.com/thumbnail?id=' + id + '&sz=w600',
-        viewLink: isImage 
-          ? 'https://drive.google.com/thumbnail?id=' + id + '&sz=w2000'
-          : 'https://drive.google.com/file/d/' + id + '/preview',
-        createdTime: file.getDateCreated() ? file.getDateCreated().toISOString() : ''
-      });
-    }
+    var mime = file.getMimeType() || '';
+    var isImage = mime.indexOf('image/') !== -1;
+    var id = file.getId();
+    
+    media.push({
+      id: id,
+      name: file.getName(),
+      mimeType: mime,
+      thumbnailLink: 'https://drive.google.com/thumbnail?id=' + id + '&sz=w300', // Small by default
+      viewLink: isImage 
+        ? 'https://drive.google.com/thumbnail?id=' + id + '&sz=w2000'
+        : 'https://drive.google.com/file/d/' + id + '/preview',
+      createdTime: file.getDateCreated() ? file.getDateCreated().toISOString() : ''
+    });
   }
   
-  // Sort this batch
+  // Sort this batch (most recent first)
   media.sort(function(a, b) { 
-    if (!a.createdTime) return 1;
-    if (!b.createdTime) return -1;
-    return b.createdTime.localeCompare(a.createdTime); 
+    return (b.createdTime || '').localeCompare(a.createdTime || '');
   });
   
   var nextToken = files.hasNext() ? files.getContinuationToken() : null;
