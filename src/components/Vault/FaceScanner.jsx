@@ -157,19 +157,24 @@ export default function FaceScanner({ folderId, images, onComplete, onCancel }) 
             </p>
 
             {(status === 'fetching' || status === 'scanning' || status === 'clustering') && (
-                <div style={{ marginBottom: '2rem' }}>
-                    <div style={{ width: '100%', height: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '5px', overflow: 'hidden', marginBottom: '1rem' }}>
+                <div style={{ marginBottom: '2.5rem' }}>
+                    <div style={{ width: '100%', height: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '5px', overflow: 'hidden', marginBottom: '1rem', position: 'relative' }}>
                         <div style={{
-                            width: status === 'fetching' ? '100%' : `${progress}%`,
+                            width: (status === 'fetching' || status === 'clustering') ? '100%' : `${progress}%`,
                             height: '100%',
-                            background: 'linear-gradient(90deg, #a78bfa, #7c3aed)',
+                            background: (status === 'fetching' || status === 'clustering')
+                                ? 'linear-gradient(90deg, #a78bfa 0%, #7c3aed 50%, #a78bfa 100%)'
+                                : 'linear-gradient(90deg, #a78bfa, #7c3aed)',
+                            backgroundSize: '200% 100%',
                             transition: 'width 0.3s ease',
-                            animation: status === 'fetching' ? 'pulse 1.5s infinite' : 'none'
+                            animation: (status === 'fetching' || status === 'clustering') ? 'loading-slide 2s linear infinite' : 'none'
                         }} />
                     </div>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent)' }}>
-                        {status === 'fetching' ? 'FETCHING DATA...' : `${progress}% COMPLETE`}
-                    </span>
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            {status === 'fetching' ? 'Discovery Phase...' : status === 'clustering' ? 'Grouping Phase...' : `${progress}% SCANNED`}
+                        </span>
+                    </div>
                 </div>
             )}
 
@@ -210,12 +215,12 @@ export default function FaceScanner({ folderId, images, onComplete, onCancel }) 
             </p>
 
             <style>{`
-                @keyframes pulse {
-                    0% { opacity: 0.4; }
-                    50% { opacity: 1; }
-                    100% { opacity: 0.4; }
+                @keyframes loading-slide {
+                    0% { background-position: 100% 0; }
+                    100% { background-position: -100% 0; }
                 }
             `}</style>
+
         </div>
     );
 }
