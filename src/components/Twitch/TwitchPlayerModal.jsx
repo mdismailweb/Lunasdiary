@@ -25,8 +25,8 @@ export default function TwitchPlayerModal({ channel, videoId, onClose }) {
     // Construct the embed URL
     // If videoId is provided, play VOD. Otherwise, play live channel.
     const embedUrl = videoId
-        ? `https://player.twitch.tv/?video=${videoId}&parent=${parentDomain}&autoplay=true`
-        : `https://player.twitch.tv/?channel=${channel}&parent=${parentDomain}&autoplay=true`;
+        ? `https://player.twitch.tv/?video=${videoId}&parent=${parentDomain}&autoplay=true&muted=false`
+        : `https://player.twitch.tv/?channel=${channel}&parent=${parentDomain}&autoplay=true&muted=false`;
 
     return ReactDOM.createPortal(
         <div
