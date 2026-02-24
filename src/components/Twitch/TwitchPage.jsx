@@ -94,6 +94,8 @@ export default function TwitchPage() {
     const [activePlayer, setActivePlayer] = useState({ channel: null, videoId: null });
 
     const loadSyncData = useCallback(async () => {
+        console.log('[Twitch] Loading data...');
+        setLoading(true);
         try {
             const [chans, lib, data] = await Promise.all([
                 api.getTwitchChannels(),
@@ -101,15 +103,20 @@ export default function TwitchPage() {
                 api.getTwitchData()
             ]);
 
-            setChannels(Array.isArray(chans) ? chans : []);
-            setLibrary(lib || []);
-            setDismissed(new Set(data.dismissed || []));
-            setStreams(data.streams || []);
-            setVideos(data.videos || []);
+            console.log('[Twitch] Raw Res:', { chans, lib, data });
 
-            if (data.error) setError(data.error);
+            setChannels(Array.isArray(chans) ? chans : []);
+            setLibrary(Array.isArray(lib) ? lib : []);
+            setDismissed(new Set(data?.dismissed || []));
+            setStreams(data?.streams || []);
+            setVideos(data?.videos || []);
+
+            if (data?.error) {
+                console.error('[Twitch] API Error:', data.error);
+                setError(data.error);
+            }
         } catch (err) {
-            console.error('Twitch load error:', err);
+            console.error('[Twitch] Load Failed:', err);
             setError('Failed to connect to Twitch API.');
         } finally {
             setLoading(false);
@@ -315,7 +322,15 @@ export default function TwitchPage() {
                             </div>
                         )}
 
+                        {channels.length === 0 && (
+                            <div className="empty-state" style={{ marginTop: '6rem' }}>
+                                <span className="empty-emoji">📡</span>
+                                <p>No channels followed yet. Use the sidebar to find your favorite streamers!</p>
+                            </div>
+                        )}
+
                         {filteredStreams.length === 0 && pendingVideos.length === 0 && filteredLibrary.length === 0 && channels.length > 0 && (
+
                             <div className="empty-state" style={{ marginTop: '6rem' }}>
                                 <span className="empty-emoji">🎮</span>
                                 <p>No active streams or recent highlights found.</p>
