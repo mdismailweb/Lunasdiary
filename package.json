@@ -1,0 +1,25 @@
+{
+  "name": "lunasnotes",
+  "version": "1.0.0",
+  "description": "Luna's Notes — Personal journaling and productivity app",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-photo-album": "^3.5.1",
+    "react-router-dom": "^7.13.0",
+    "yet-another-react-lightbox": "^3.29.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.4",
+    "vite": "^7.3.1"
+  }
+}
