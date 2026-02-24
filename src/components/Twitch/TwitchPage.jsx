@@ -36,15 +36,24 @@ function TwitchVideoCard({ item, type, onPlay, onSave, onDismiss }) {
     const channelName = isLive ? item.user_login : null;
     const videoId = !isLive ? (item.video_id || item.id) : null;
 
+    // Fix Twitch thumbnail placeholders ({width}x{height})
+    const getThumbnail = (url) => {
+        if (!url) return 'https://static-cdn.jtvnw.net/ttv-static/404_preview-400x225.jpg'; // Twitch fallback
+        return url
+            .replace('{width}', '400').replace('{height}', '225')
+            .replace('%7Bwidth%7D', '400').replace('%7Bheight%7D', '225');
+    };
+
     return (
         <div className={isPending ? "yt-pending-card" : "yt-video-card"} onClick={() => onPlay(channelName, videoId)} style={{ cursor: 'pointer' }}>
             <div className={isPending ? "yt-pending-link" : ""}>
-                <div className="yt-thumb-wrap">
+                <div className="yt-thumb-wrap" style={{ background: '#1a1a2e' }}>
                     <img
-                        src={item.thumbnail_url?.replace('{width}', '400').replace('{height}', '225') || item.thumbnail}
-                        alt={item.title}
+                        src={getThumbnail(item.thumbnail_url || item.thumbnail)}
+                        alt=""
                         className="yt-thumb"
                         style={{ borderBottom: isLive ? '3px solid #ff4655' : 'none' }}
+                        onError={(e) => { e.target.src = 'https://static-cdn.jtvnw.net/ttv-static/404_preview-400x225.jpg'; }}
                     />
                     {isLive && <span className="yt-ago" style={{ background: '#ff4655', color: '#fff' }}>LIVE</span>}
                     {!isLive && <span className="yt-ago">{timeAgo(item.created_at || item.published_at || item.saved_at)}</span>}
