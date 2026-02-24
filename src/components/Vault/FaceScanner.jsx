@@ -79,13 +79,12 @@ export default function FaceScanner({ folderId, images, onComplete, onCancel }) 
     const startScan = async (scanItems) => {
         setStatus('scanning');
         const descriptorsFound = [];
+        const CONCURRENCY = 4; // Scan 4 images at a time
+        let completedCount = 0;
 
-        for (let i = 0; i < scanItems.length; i++) {
+        // Helper to process a single image and update shared results
+        const processImage = async (imgData) => {
             if (abortRef.current) return;
-            const imgData = scanItems[i];
-            setProgress(Math.round((i / scanItems.length) * 100));
-            setLog(`Scanning face ${i + 1}/${scanItems.length}: ${imgData.title || imgData.id}`);
-
             try {
                 const img = await faceapi.fetchImage(imgData.src);
                 const detections = await faceapi.detectAllFaces(img)
@@ -104,7 +103,18 @@ export default function FaceScanner({ folderId, images, onComplete, onCancel }) 
                 }
             } catch (e) {
                 console.warn('Failed to process image:', imgData.id, e);
+            } finally {
+                completedCount++;
+                setProgress(Math.round((completedCount / scanItems.length) * 100));
+                setLog(`Scanning faces: ${completedCount}/${scanItems.length} images processed`);
             }
+        };
+
+        // Run images in parallel batches
+        for (let i = 0; i < scanItems.length; i += CONCURRENCY) {
+            if (abortRef.current) return;
+            const batch = scanItems.slice(i, i + CONCURRENCY);
+            await Promise.all(batch.map(item => processImage(item)));
         }
 
         if (abortRef.current) return;
@@ -116,6 +126,7 @@ export default function FaceScanner({ folderId, images, onComplete, onCancel }) 
         setStatus('complete');
         setLog(`Identified ${groups.length} distinct people!`);
     };
+
 
     const clusterFaces = (faces) => {
         const groups = [];
