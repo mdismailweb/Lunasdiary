@@ -95,6 +95,9 @@ export const addVaultFolder = (name, folderId) => _rawCall('addVaultFolder', { n
 export const removeVaultFolder = (id) => _rawCall('removeVaultFolder', { id });
 export const getLikedImages = () => _rawCall('getLikedImages');
 export const toggleLikedImage = (params) => _rawCall('toggleLikedImage', params);
+export const getFaceGroups = (folderId) => _rawCall('getFaceGroups', { folderId });
+export const saveFaceGroups = (folderId, groups) => _rawCall('saveFaceGroups', { folderId, groups });
+
 
 // ─── App Passwords ───────────────────────────────────────────
 export const getAppPassword = (id) => _call('getAppPassword', { id });

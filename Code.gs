@@ -20,6 +20,7 @@ var S = {
   TAGS:          'TAGS_MASTER',
   VAULT_FOLDERS: 'VAULT_FOLDERS',
   VAULT_LIKED:   'VAULT_LIKED',
+  VAULT_FACES:   'VAULT_FACES',
   PASSWORDS:     'APP_PASSWORDS',
   LIFE_MAP:      'LIFE_MAP',
   TIME_CAPSULES: 'TIME_CAPSULES',
@@ -141,7 +142,9 @@ function doPost(e) {
       case 'addVaultFolder':       result = addVaultFolder(params);         break;
       case 'removeVaultFolder':    result = removeVaultFolder(params);      break;
       case 'getLikedImages':       result = getLikedImages();               break;
-      case 'toggleLikedImage':     result = toggleLikedImage(params);       break;
+       case 'toggleLikedImage':     result = toggleLikedImage(params);       break;
+       case 'getFaceGroups':        result = getFaceGroups(params);          break;
+       case 'saveFaceGroups':       result = saveFaceGroups(params);         break;
 
       // ── App Passwords ──
       case 'getAppPassword':       result = getAppPassword(params);         break;
@@ -1992,3 +1995,59 @@ function _initTwitch() {
     sheet.appendRow(['id', 'login', 'display_name', 'profile_image_url', 'added_at']);
   }
 }
+
+// ── VAULT FACE RECOGNITION ────────────────────────────────────
+function getFaceGroups(params) {
+  var folderId = params.folderId;
+  if (!folderId) return { groups: [] };
+  
+  var sheet = _getOrCreateSheet(S.VAULT_FACES, ['FolderID', 'GroupID', 'Label', 'CoverImageID', 'MemberImageIDs', 'CreatedAt']);
+  var data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return { groups: [] };
+  
+  var groups = data.slice(1)
+    .filter(function(row) { return String(row[0]) === String(folderId); })
+    .map(function(row) {
+      return {
+        folderId: String(row[0]),
+        groupId: String(row[1]),
+        label: String(row[2]),
+        coverImageId: String(row[3]),
+        memberImageIds: String(row[4]).split(','),
+        createdAt: String(row[5])
+      };
+    });
+    
+  return { groups: groups };
+}
+
+function saveFaceGroups(params) {
+  var folderId = params.folderId;
+  var groups = params.groups; // Array of group objects
+  if (!folderId || !groups) throw new Error('folderId and groups required');
+  
+  var sheet = _getOrCreateSheet(S.VAULT_FACES, ['FolderID', 'GroupID', 'Label', 'CoverImageID', 'MemberImageIDs', 'CreatedAt']);
+  var data = sheet.getDataRange().getValues();
+  
+  // Remove all existing groups for this folder to overwrite them
+  for (var i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][0]) === String(folderId)) {
+      sheet.deleteRow(i + 1);
+    }
+  }
+  
+  // Append new group data
+  groups.forEach(function(g) {
+    sheet.appendRow([
+      folderId,
+      g.groupId,
+      g.label || '(unknown)',
+      g.coverImageId || '',
+      (g.memberImageIds || []).join(','),
+      new Date().toISOString()
+    ]);
+  });
+  
+  return { success: true, count: groups.length };
+}
+

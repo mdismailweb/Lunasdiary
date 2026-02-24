@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { ColumnsPhotoAlbum } from "react-photo-album";
 import "react-photo-album/columns.css";
-import { getVaultMedia, getLikedImages, toggleLikedImage } from '../../services/api';
+import { getVaultMedia, getLikedImages, toggleLikedImage, getFaceGroups } from '../../services/api';
 import { SkeletonCard } from '../Shared/Skeleton';
+import FaceScanner from './FaceScanner';
+import FaceGroupsView from './FaceGroupsView';
+
 
 // ─── VaultLightbox ───────────────────────────────────────────
 function VaultLightbox({ items, index, onClose, likedIds, onLike }) {
@@ -204,6 +207,9 @@ export default function GooglePhotos({ activeTab, folders, onTabChange }) {
     const [lightboxIndex, setLightboxIndex] = useState(-1);
     const [lightboxItems, setLightboxItems] = useState([]);
     const [likePending, setLikePending] = useState(new Set());
+    const [faceMode, setFaceMode] = useState('grid'); // grid | scanner | groups
+    const [scannedGroups, setScannedGroups] = useState([]);
+
 
     // Load liked images from Sheets on mount
     useEffect(() => {
@@ -217,6 +223,8 @@ export default function GooglePhotos({ activeTab, folders, onTabChange }) {
     useEffect(() => {
         if (!activeTab || activeTab === 'liked') return;
         const folder = folders?.find(f => f.id === activeTab);
+        setFaceMode('grid');
+        setScannedGroups([]);
         if (!folder || folderCache[folder.folderId]) return;
         fetchFolder(folder);
     }, [activeTab, folders]);
@@ -320,12 +328,41 @@ export default function GooglePhotos({ activeTab, folders, onTabChange }) {
         <div className="empty-state"><div className="empty-emoji">🖼️</div><p>No media found in this folder.</p></div>
     );
 
+    if (faceMode === 'scanner') {
+        return (
+            <div style={{ padding: '2rem 1rem' }}>
+                <FaceScanner
+                    folderId={folder.folderId}
+                    images={items}
+                    onComplete={(groups) => { setScannedGroups(groups); setFaceMode('groups'); }}
+                    onCancel={() => setFaceMode('grid')}
+                />
+            </div>
+        );
+    }
+
+    if (faceMode === 'groups') {
+        return (
+            <div style={{ padding: '2rem 0' }}>
+                <FaceGroupsView
+                    folderId={folder.folderId}
+                    groups={scannedGroups}
+                    onSave={() => setFaceMode('grid')}
+                    onBack={() => setFaceMode('scanner')}
+                />
+            </div>
+        );
+    }
+
     return (
         <div style={{ paddingBottom: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {items.length} items {hasMore ? '(more available)' : ''} · {folder.name}
-                </p>
+                <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center' }}>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        {items.length} items {hasMore ? '(more available)' : ''} · {folder.name}
+                    </p>
+                    <button className="btn btn-ghost btn-sm" style={{ padding: '0.2rem 0.6rem', fontSize: '0.7rem' }} onClick={() => setFaceMode('scanner')}>🧬 Scan Faces</button>
+                </div>
                 <button className="btn btn-ghost btn-sm" onClick={() => { setFolderCache(c => { const n = { ...c }; delete n[folder.folderId]; return n; }); fetchFolder(folder); }} disabled={loading}>🔄</button>
             </div>
 

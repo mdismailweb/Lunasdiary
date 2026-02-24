@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import GooglePhotos from './GooglePhotos';
+import PeopleView from './PeopleView';
 import VaultLock from './VaultLock';
 import { getVaultFolders, addVaultFolder, removeVaultFolder } from '../../services/api';
 
@@ -125,6 +126,14 @@ function VaultPage() {
                     label="Liked"
                 />
 
+                <NavBtn
+                    active={activeTab === 'people'}
+                    onClick={() => setActiveTab('people')}
+                    icon="👥"
+                    label="People"
+                />
+
+
                 {/* Divider */}
                 {folders.length > 0 && (
                     <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', padding: '0.5rem 0.9rem 0.2rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
@@ -161,12 +170,17 @@ function VaultPage() {
 
             {/* ─── Content Area ─── */}
             <div style={{ flex: 1, minWidth: 0 }}>
-                <GooglePhotos
-                    activeTab={activeTab}
-                    folders={folders}
-                    onTabChange={setActiveTab}
-                />
+                {activeTab === 'people' ? (
+                    <PeopleView folders={folders} />
+                ) : (
+                    <GooglePhotos
+                        activeTab={activeTab}
+                        folders={folders}
+                        onTabChange={setActiveTab}
+                    />
+                )}
             </div>
+
 
             {showAdd && <AddFolderModal onAdd={handleAddFolder} onClose={() => setShowAdd(false)} />}
         </div>
