@@ -38,10 +38,19 @@ function TwitchVideoCard({ item, type, onPlay, onSave, onDismiss }) {
 
     // Fix Twitch thumbnail placeholders ({width}x{height})
     const getThumbnail = (url) => {
-        if (!url) return 'https://static-cdn.jtvnw.net/ttv-static/404_preview-400x225.jpg'; // Twitch fallback
-        return url
-            .replace('{width}', '400').replace('{height}', '225')
-            .replace('%7Bwidth%7D', '400').replace('%7Bheight%7D', '225');
+        if (!url) return 'https://static-cdn.jtvnw.net/ttv-static/404_preview-400x225.jpg';
+
+        // Standardize placeholders
+        const processed = url
+            .replace(/\{width\}/g, '400')
+            .replace(/\{height\}/g, '225')
+            .replace(/%7Bwidth%7D/g, '400')
+            .replace(/%7Bheight%7D/g, '225');
+
+        // Log a sample to help debug
+        if (Math.random() < 0.05) console.log('[Twitch] Sample Thumbnail:', processed);
+
+        return processed;
     };
 
     return (
