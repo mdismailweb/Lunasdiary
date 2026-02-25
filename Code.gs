@@ -1818,9 +1818,9 @@ function logStreak(params) {
   for (var i = 1; i < data.length; i++) {
     var sheetDate = data[i][1];
     if (sheetDate instanceof Date) {
-      sheetDate = sheetDate.toISOString().split('T')[0];
+      sheetDate = Utilities.formatDate(sheetDate, Session.getScriptTimeZone(), 'yyyy-MM-dd');
     }
-    if (String(data[i][0]) === String(params.streak_id) && String(sheetDate).split('T')[0] === logDate) {
+    if (String(data[i][0]) === String(params.streak_id) && String(sheetDate) === logDate) {
        return { success: true, action: 'already_logged' };
     }
   }
@@ -1834,8 +1834,10 @@ function getStreakLogs(params) {
   for (var i = 1; i < data.length; i++) {
     if (!params.streak_id || String(data[i][0]) === String(params.streak_id)) {
       var d = data[i][1];
-      if (d instanceof Date) d = d.toISOString().split('T')[0];
-      result.push({ streak_id: data[i][0], date: String(d).split('T')[0] });
+      if (d instanceof Date) {
+        d = Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+      }
+      result.push({ streak_id: data[i][0], date: String(d) });
     }
   }
   return result;
