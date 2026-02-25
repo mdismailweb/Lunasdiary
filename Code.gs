@@ -511,6 +511,8 @@ function initializeApp() {
   sheetDefs[S.TWITCH_CHANNELS] = ['id', 'login', 'display_name', 'profile_image_url', 'added_at'];
   sheetDefs[S.TWITCH_DISMISSED] = ['item_id', 'dismissed_at'];
   sheetDefs[S.TWITCH_CONFIG] = ['client_id', 'client_secret'];
+  sheetDefs[S.SAVED_TWITCH_VIDEOS] = ['video_id', 'title', 'user_name', 'user_id', 'thumbnail_url', 'created_at', 'type', 'url', 'duration', 'saved_at'];
+  sheetDefs[S.DELEGATION] = ['id', 'title', 'source', 'link', 'category', 'importance', 'note', 'added_at'];
 
   var created = [];
   Object.keys(sheetDefs).forEach(function(name) {
@@ -2126,20 +2128,49 @@ function removeSavedTwitchVideo(params) {
 // ─── DELEGATION ───────────────────────────────────────────────
 
 function getDelegation() {
-  return { success: true, data: _readAll(S.DELEGATION) };
+  var ss = _ss();
+  var sheet = ss.getSheetByName(S.DELEGATION);
+  if (!sheet) {
+    // Auto-create the sheet if it doesn't exist yet
+    sheet = ss.insertSheet(S.DELEGATION);
+    sheet.appendRow(['id', 'title', 'source', 'link', 'category', 'importance', 'note', 'added_at']);
+    return { success: true, data: [] };
+  }
+  return { success: true, data: _sheetToObjects(S.DELEGATION) };
 }
 
 function saveDelegationItem(params) {
-  if (!params.id) params.id = _uuid();
+  var ss = _ss();
+  // Auto-create sheet with headers if missing
+  var sheet = ss.getSheetByName(S.DELEGATION);
+  if (!sheet) {
+    sheet = ss.insertSheet(S.DELEGATION);
+    sheet.appendRow(['id', 'title', 'source', 'link', 'category', 'importance', 'note', 'added_at']);
+  }
+  if (!params.id) params.id = Utilities.getUuid();
   params.added_at = _now();
-  _upsertRow(S.DELEGATION, 'id', params);
+
+  // Check if row already exists (upsert)
+  var row = _findRow(S.DELEGATION, 'id', params.id);
+  if (row > 0) {
+    // Update existing
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var values = headers.map(function(h) { return params[h] !== undefined ? params[h] : ''; });
+    sheet.getRange(row, 1, 1, values.length).setValues([values]);
+  } else {
+    // Append new
+    _appendRow(S.DELEGATION, params);
+  }
   return { success: true, data: params };
 }
 
 function deleteDelegationItem(params) {
+  var ss = _ss();
+  var sheet = ss.getSheetByName(S.DELEGATION);
+  if (!sheet) return { success: true };
   var row = _findRow(S.DELEGATION, 'id', params.id);
   if (row > 0) {
-    _ss().getSheetByName(S.DELEGATION).deleteRow(row);
+    sheet.deleteRow(row);
   }
   return { success: true };
 }

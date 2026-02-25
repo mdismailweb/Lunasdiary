@@ -181,8 +181,10 @@ export default function DelegationPage() {
     const loadItems = async () => {
         setLoading(true);
         try {
-            const data = await api.getDelegation();
-            setItems(Array.isArray(data) ? data.reverse() : []);
+            const res = await api.getDelegation();
+            // Backend returns { success, data: [...] }, _call unwraps outer, so res = { success, data: [...] }
+            const list = Array.isArray(res) ? res : (res?.data || []);
+            setItems([...list].reverse());
         } catch (err) {
             console.error('Failed to load delegation items', err);
         } finally {
@@ -191,8 +193,10 @@ export default function DelegationPage() {
     };
 
     const handleSave = async (form) => {
-        const saved = await api.saveDelegationItem(form);
-        setItems(prev => [saved, ...prev]);
+        const res = await api.saveDelegationItem(form);
+        // Backend returns { success, data: { ...savedItem } }
+        const saved = res?.data || res;
+        if (saved && saved.id) setItems(prev => [saved, ...prev]);
     };
 
     const handleDelete = async (id) => {
