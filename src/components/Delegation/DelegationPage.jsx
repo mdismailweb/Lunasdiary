@@ -111,14 +111,22 @@ function DelegationCard({ item, onDelete }) {
 function QuickAddModal({ onClose, onSave }) {
     const [form, setForm] = useState({ title: '', link: '', source: 'Manual', category: 'Other', importance: 'High', note: '' });
     const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!form.title.trim()) return;
         setSaving(true);
-        await onSave(form);
-        setSaving(false);
-        onClose();
+        setError('');
+        try {
+            await onSave(form);
+            onClose();
+        } catch (err) {
+            console.error('Delegation save failed:', err);
+            setError(err?.message || 'Failed to save. Check your Apps Script deployment.');
+        } finally {
+            setSaving(false);
+        }
     };
 
     const field = (label, key, type = 'text', opts = {}) => (
@@ -152,6 +160,11 @@ function QuickAddModal({ onClose, onSave }) {
                         {field('Importance', 'importance', 'text', { as: 'select', options: IMPORTANCE })}
                     </div>
                     {field('Note (optional)', 'note', 'text', { as: 'textarea', placeholder: 'Why is this important?' })}
+                    {error && (
+                        <p style={{ margin: 0, color: '#ff6b6b', fontSize: '0.8rem', padding: '0.5rem 0.75rem', background: 'rgba(255,107,107,0.1)', borderRadius: '8px', border: '1px solid rgba(255,107,107,0.3)' }}>
+                            ⚠️ {error}
+                        </p>
+                    )}
                     <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
                         <button type="button" onClick={onClose} style={{ flex: 1, padding: '0.9rem', borderRadius: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'white', cursor: 'pointer' }}>Cancel</button>
                         <button type="submit" disabled={saving} style={{ flex: 2, padding: '0.9rem', borderRadius: '12px', background: 'linear-gradient(135deg, #a970ff, #7c4dff)', border: 'none', color: 'white', fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
@@ -196,7 +209,8 @@ export default function DelegationPage() {
         const res = await api.saveDelegationItem(form);
         // Backend returns { success, data: { ...savedItem } }
         const saved = res?.data || res;
-        if (saved && saved.id) setItems(prev => [saved, ...prev]);
+        if (!saved || !saved.id) throw new Error('Unexpected response from server. Check your Apps Script deployment.');
+        setItems(prev => [saved, ...prev]);
     };
 
     const handleDelete = async (id) => {
