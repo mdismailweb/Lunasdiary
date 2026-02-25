@@ -1865,7 +1865,20 @@ function deleteFinanceItem(params) { return _deleteFromSheet(S.FINANCE, FINANCE_
 // ── 15. Bookmarks ──
 var BOOKMARK_HEADERS = ['id', 'url', 'title', 'description', 'tags', 'favicon', 'created_at', 'is_read', 'updatedAt'];
 function getBookmarks() { return _getAllFromSheet(S.BOOKMARKS, BOOKMARK_HEADERS); }
-function saveBookmark(params) { return _upsertToSheet(S.BOOKMARKS, BOOKMARK_HEADERS, 'id', params); }
+function saveBookmark(params) {
+  // Reject duplicate URLs
+  var existing = _getAllFromSheet(S.BOOKMARKS, BOOKMARK_HEADERS);
+  var normalise = function(u) { return (u || '').trim().replace(/\/+$/, '').toLowerCase(); };
+  var incomingUrl = normalise(params.url);
+  if (existing && existing.data) {
+    for (var i = 0; i < existing.data.length; i++) {
+      if (normalise(existing.data[i].url) === incomingUrl) {
+        return { success: false, error: 'duplicate_url', message: 'This URL is already bookmarked.' };
+      }
+    }
+  }
+  return _upsertToSheet(S.BOOKMARKS, BOOKMARK_HEADERS, 'id', params);
+}
 function deleteBookmark(params) { return _deleteFromSheet(S.BOOKMARKS, BOOKMARK_HEADERS, 'id', params.id); }
 
 // ── 17. Writing ──

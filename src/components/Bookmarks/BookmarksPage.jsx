@@ -9,6 +9,8 @@ export default function BookmarksPage() {
     const [formData, setFormData] = useState({ title: '', url: '', tags: '', note: '' });
     const [delegateBookmark, setDelegateBookmark] = useState(false);
     const [delegateDueDate, setDelegateDueDate] = useState('');
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
 
     useEffect(() => {
         loadBookmarks();
@@ -29,12 +31,21 @@ export default function BookmarksPage() {
         e.preventDefault();
         if (!formData.url) return;
 
+        const normalise = (u) => (u || '').trim().replace(/\/+$/, '').toLowerCase();
+        const incomingUrl = normalise(formData.url);
+        if (bookmarks.some(b => normalise(b.url) === incomingUrl)) {
+            setError('This URL is already in your bookmarks.');
+            return;
+        }
+
         const newBookmark = {
             id: Date.now().toString(),
             ...formData,
             created_at: new Date().toISOString()
         };
 
+        setSaving(true);
+        setError('');
         try {
             await api.saveBookmark(newBookmark);
             setBookmarks([newBookmark, ...bookmarks]);
@@ -53,7 +64,10 @@ export default function BookmarksPage() {
             setDelegateBookmark(false);
             setDelegateDueDate('');
         } catch (err) {
-            alert('Failed to save bookmark');
+            console.error('Save bookmark error:', err);
+            setError(err.message || 'Failed to save bookmark');
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -157,7 +171,10 @@ export default function BookmarksPage() {
             {showAdd && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
                     <div style={{ background: 'var(--card-bg)', padding: '2rem', borderRadius: '24px', width: '450px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        <h2 style={{ marginTop: 0 }}>Save Bookmark</h2>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <h2 style={{ margin: 0 }}>Save Bookmark</h2>
+                            <button onClick={() => { setShowAdd(false); setError(''); }} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: '1.5rem', cursor: 'pointer' }}>×</button>
+                        </div>
                         <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
                             <input
                                 type="url"
@@ -206,9 +223,16 @@ export default function BookmarksPage() {
                                     </div>
                                 )}
                             </div>
+                            {error && (
+                                <p style={{ margin: 0, color: '#ff6b6b', fontSize: '0.8rem', padding: '0.5rem 0.75rem', background: 'rgba(255,107,107,0.1)', borderRadius: '8px', border: '1px solid rgba(255,107,107,0.3)' }}>
+                                    ⚠️ {error}
+                                </p>
+                            )}
                             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                                <button type="button" onClick={() => setShowAdd(false)} style={{ flex: 1, padding: '0.9rem', borderRadius: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'white', cursor: 'pointer' }}>Cancel</button>
-                                <button type="submit" style={{ flex: 1, padding: '0.9rem', borderRadius: '12px', background: 'var(--brand-color, #a29bfe)', border: 'none', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}>Save Bookmark</button>
+                                <button type="button" onClick={() => { setShowAdd(false); setError(''); }} style={{ flex: 1, padding: '0.9rem', borderRadius: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'white', cursor: 'pointer' }}>Cancel</button>
+                                <button type="submit" disabled={saving} style={{ flex: 1, padding: '0.9rem', borderRadius: '12px', background: 'var(--brand-color, #a29bfe)', border: 'none', color: 'white', fontWeight: 'bold', cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
+                                    {saving ? 'Saving...' : 'Save Bookmark'}
+                                </button>
                             </div>
                         </form>
                     </div>
