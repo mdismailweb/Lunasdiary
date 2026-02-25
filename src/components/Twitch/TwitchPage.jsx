@@ -32,6 +32,7 @@ function TwitchVideoCard({ item, type, onPlay, onSave, onDismiss }) {
     const isSaved = type === 'library';
     const isPending = type === 'pending';
     const [shouldDelegate, setShouldDelegate] = useState(false);
+    const [delegateDueDate, setDelegateDueDate] = useState('');
 
     // Construct IDs for the player
     const channelName = isLive ? item.user_login : null;
@@ -72,19 +73,30 @@ function TwitchVideoCard({ item, type, onPlay, onSave, onDismiss }) {
             {(isPending || isLive || isSaved) && (onSave || onDismiss || (isSaved && onSave)) && (
                 <div className="yt-pending-actions" style={{ flexDirection: (isPending || isLive) ? 'column' : 'row', gap: '8px', alignItems: 'flex-end' }}>
                     {onSave && !isSaved && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <label className="delegate-toggle" onClick={e => e.stopPropagation()} style={{ fontSize: '10px', color: '#888', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                                <input type="checkbox" checked={shouldDelegate} onChange={e => setShouldDelegate(e.target.checked)} style={{ width: '12px', height: '12px' }} />
-                                📥 Delegation
-                            </label>
-                            <button
-                                className="yt-approve-btn"
-                                onClick={(e) => { e.stopPropagation(); onSave(item, isLive, shouldDelegate); }}
-                                title={isLive ? "Bookmark Stream" : "Add to Library"}
-                                style={{ background: isLive ? 'rgba(169, 112, 255, 0.2)' : undefined, color: isLive ? '#a970ff' : undefined }}
-                            >
-                                ＋
-                            </button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' }} onClick={e => e.stopPropagation()}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <label className="delegate-toggle" style={{ fontSize: '10px', color: '#888', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                                    <input type="checkbox" checked={shouldDelegate} onChange={e => setShouldDelegate(e.target.checked)} style={{ width: '12px', height: '12px' }} />
+                                    📥 Delegation
+                                </label>
+                                <button
+                                    className="yt-approve-btn"
+                                    onClick={(e) => { e.stopPropagation(); onSave(item, isLive, shouldDelegate, delegateDueDate); }}
+                                    title={isLive ? 'Bookmark Stream' : 'Add to Library'}
+                                    style={{ background: isLive ? 'rgba(169, 112, 255, 0.2)' : undefined, color: isLive ? '#a970ff' : undefined }}
+                                >
+                                    ＋
+                                </button>
+                            </div>
+                            {shouldDelegate && (
+                                <input
+                                    type="datetime-local"
+                                    value={delegateDueDate}
+                                    onChange={e => setDelegateDueDate(e.target.value)}
+                                    style={{ padding: '3px 6px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(169,112,255,0.3)', color: 'white', colorScheme: 'dark', fontSize: '0.7rem', width: '100%' }}
+                                    placeholder="Due date/time"
+                                />
+                            )}
                         </div>
                     )}
                     {isSaved && onSave && (
@@ -195,7 +207,7 @@ export default function TwitchPage() {
         }
     };
 
-    const handleSave = async (item, isLive, shouldDelegate = false) => {
+    const handleSave = async (item, isLive, shouldDelegate = false, delegateDueDate = '') => {
         const payload = {
             video_id: item.video_id || item.id,
             title: item.title,
@@ -218,7 +230,8 @@ export default function TwitchPage() {
                     source: 'Twitch',
                     link: payload.url,
                     category: isLive ? 'Live Stream' : 'VOD',
-                    importance: 'High'
+                    importance: 'High',
+                    due_date: delegateDueDate || ''
                 });
             }
         } catch (err) {

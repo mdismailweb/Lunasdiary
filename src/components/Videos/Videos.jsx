@@ -46,12 +46,13 @@ function VideoCard({ video, onPlay }) {
 function PendingCard({ video, onApprove, onDismiss, onPlay }) {
     const [saving, setSaving] = useState(false);
     const [shouldDelegate, setShouldDelegate] = useState(false);
+    const [delegateDueDate, setDelegateDueDate] = useState('');
 
     const handleApprove = async (e) => {
         e.preventDefault();
         e.stopPropagation();
         setSaving(true);
-        await onApprove(video, shouldDelegate);
+        await onApprove(video, shouldDelegate, delegateDueDate);
         setSaving(false);
     };
 
@@ -73,9 +74,9 @@ function PendingCard({ video, onApprove, onDismiss, onPlay }) {
                     <span className="yt-video-ch">{video.channelTitle}</span>
                 </div>
             </div>
-            <div className="yt-pending-actions" style={{ flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+            <div className="yt-pending-actions" style={{ flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }} onClick={e => e.stopPropagation()}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <label className="delegate-toggle" onClick={e => e.stopPropagation()} style={{ fontSize: '10px', color: '#888', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                    <label className="delegate-toggle" style={{ fontSize: '10px', color: '#888', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
                         <input type="checkbox" checked={shouldDelegate} onChange={e => setShouldDelegate(e.target.checked)} style={{ width: '12px', height: '12px' }} />
                         📥 Delegation
                     </label>
@@ -83,6 +84,15 @@ function PendingCard({ video, onApprove, onDismiss, onPlay }) {
                         {saving ? '…' : '＋'}
                     </button>
                 </div>
+                {shouldDelegate && (
+                    <input
+                        type="datetime-local"
+                        value={delegateDueDate}
+                        onChange={e => setDelegateDueDate(e.target.value)}
+                        style={{ padding: '3px 6px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(169,112,255,0.3)', color: 'white', colorScheme: 'dark', fontSize: '0.7rem', width: '100%' }}
+                        placeholder="Due date/time"
+                    />
+                )}
                 <button className="yt-dismiss-btn" onClick={handleDismissAction} title="Ignore Video">
                     ✕
                 </button>
@@ -198,7 +208,7 @@ export default function Videos() {
         }
     };
 
-    const handleApprove = async (video, shouldDelegate = false) => {
+    const handleApprove = async (video, shouldDelegate = false, delegateDueDate = '') => {
         const payload = {
             video_id: video.id,
             title: video.title,
@@ -217,7 +227,8 @@ export default function Videos() {
                     source: 'YouTube',
                     link: `https://youtube.com/watch?v=${payload.video_id}`,
                     category: 'Video',
-                    importance: 'High'
+                    importance: 'High',
+                    due_date: delegateDueDate || ''
                 });
             }
         } catch (err) {

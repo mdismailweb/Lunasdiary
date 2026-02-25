@@ -9,6 +9,8 @@ export default function WatchlistPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [searching, setSearching] = useState(false);
+    const [shouldDelegate, setShouldDelegate] = useState(false);
+    const [delegateDueDate, setDelegateDueDate] = useState('');
     const { stats } = useDashboard();
 
     const apiKey = stats?.config?.tmdb_api_key;
@@ -56,13 +58,13 @@ export default function WatchlistPage() {
         }
     };
 
-    const addItem = async (item, shouldDelegate = false) => {
+    const addItem = async (item) => {
         const newItem = {
             id: Date.now().toString(),
             title: item.title,
             type: item.type || 'movie',
             poster_url: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : null,
-            status: 'to-watch', // to-watch, watching, finished
+            status: 'to-watch',
             rating: 0,
             added_at: new Date().toISOString()
         };
@@ -76,12 +78,15 @@ export default function WatchlistPage() {
                     source: 'Watchlist',
                     link: '',
                     category: newItem.type === 'tv' ? 'TV Show' : 'Movie',
-                    importance: 'Medium'
+                    importance: 'Medium',
+                    due_date: delegateDueDate || ''
                 });
             }
             setShowAdd(false);
             setSearchQuery('');
             setSearchResults([]);
+            setShouldDelegate(false);
+            setDelegateDueDate('');
         } catch (err) {
             alert('Failed to add item');
         }
@@ -188,6 +193,24 @@ export default function WatchlistPage() {
                                 {searching ? '...' : apiKey ? 'Search' : 'Add'}
                             </button>
                         </form>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: '#aaa', cursor: 'pointer' }}>
+                                <input type="checkbox" checked={shouldDelegate} onChange={e => setShouldDelegate(e.target.checked)} />
+                                📥 Also add to Delegation
+                            </label>
+                            {shouldDelegate && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginLeft: '22px' }}>
+                                    <label style={{ fontSize: '0.75rem', opacity: 0.5 }}>📅 Due Date & Time (optional)</label>
+                                    <input
+                                        type="datetime-local"
+                                        value={delegateDueDate}
+                                        onChange={e => setDelegateDueDate(e.target.value)}
+                                        style={{ padding: '0.6rem 0.8rem', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(169,112,255,0.3)', color: 'white', colorScheme: 'dark', fontSize: '0.85rem' }}
+                                    />
+                                </div>
+                            )}
+                        </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', maxHeight: '400px', overflowY: 'auto' }}>
                             {searchResults.map((res, i) => (

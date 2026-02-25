@@ -8,6 +8,7 @@ export default function BookmarksPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [formData, setFormData] = useState({ title: '', url: '', tags: '', note: '' });
     const [delegateBookmark, setDelegateBookmark] = useState(false);
+    const [delegateDueDate, setDelegateDueDate] = useState('');
 
     useEffect(() => {
         loadBookmarks();
@@ -43,12 +44,14 @@ export default function BookmarksPage() {
                     source: 'Bookmark',
                     link: formData.url,
                     category: 'Reading',
-                    importance: 'High'
+                    importance: 'High',
+                    due_date: delegateDueDate || ''
                 });
             }
             setShowAdd(false);
             setFormData({ title: '', url: '', tags: '', note: '' });
             setDelegateBookmark(false);
+            setDelegateDueDate('');
         } catch (err) {
             alert('Failed to save bookmark');
         }
@@ -186,10 +189,23 @@ export default function BookmarksPage() {
                                 value={formData.note}
                                 onChange={e => setFormData({ ...formData, note: e.target.value })}
                             />
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: '#aaa', cursor: 'pointer' }}>
-                                <input type="checkbox" checked={delegateBookmark} onChange={e => setDelegateBookmark(e.target.checked)} />
-                                📥 Also add to Delegation
-                            </label>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: '#aaa', cursor: 'pointer' }}>
+                                    <input type="checkbox" checked={delegateBookmark} onChange={e => setDelegateBookmark(e.target.checked)} />
+                                    📥 Also add to Delegation
+                                </label>
+                                {delegateBookmark && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginLeft: '22px' }}>
+                                        <label style={{ fontSize: '0.75rem', opacity: 0.5 }}>📅 Due Date & Time (optional)</label>
+                                        <input
+                                            type="datetime-local"
+                                            value={delegateDueDate}
+                                            onChange={e => setDelegateDueDate(e.target.value)}
+                                            style={{ padding: '0.6rem 0.8rem', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(169,112,255,0.3)', color: 'white', colorScheme: 'dark', fontSize: '0.85rem' }}
+                                        />
+                                    </div>
+                                )}
+                            </div>
                             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                                 <button type="button" onClick={() => setShowAdd(false)} style={{ flex: 1, padding: '0.9rem', borderRadius: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'white', cursor: 'pointer' }}>Cancel</button>
                                 <button type="submit" style={{ flex: 1, padding: '0.9rem', borderRadius: '12px', background: 'var(--brand-color, #a29bfe)', border: 'none', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}>Save Bookmark</button>
