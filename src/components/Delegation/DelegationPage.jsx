@@ -126,7 +126,7 @@ function QuickAddModal({ onClose, onSave }) {
             <label style={{ fontSize: '0.8rem', opacity: 0.6, fontWeight: 600 }}>{label}</label>
             {opts.as === 'select' ? (
                 <select value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} style={inputStyle}>
-                    {opts.options.map(o => <option key={o} value={o}>{o}</option>)}
+                    {opts.options.map(o => <option key={o} value={o} style={{ background: '#1a1a2e', color: '#fff' }}>{o}</option>)}
                 </select>
             ) : opts.as === 'textarea' ? (
                 <textarea rows={3} value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} placeholder={opts.placeholder || ''} style={{ ...inputStyle, resize: 'none' }} />
