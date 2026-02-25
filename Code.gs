@@ -38,6 +38,7 @@ var S = {
   TWITCH_DISMISSED: 'TWITCH_DISMISSED',
   TWITCH_CONFIG: 'TWITCH_CONFIG',
   SAVED_TWITCH_VIDEOS: 'SAVED_TWITCH_VIDEOS',
+  DELEGATION:          'DELEGATION',
   LOGS: 'LOGS'
 };
 
@@ -218,6 +219,11 @@ function doPost(e) {
       case 'saveTwitchDismissed':  result = saveTwitchDismissed(params);    break;
       case 'removeSavedTwitchVideo': result = removeSavedTwitchVideo(params); break;
       case 'saveYouTubeVideo':     result = saveYouTubeVideo(params);       break;
+
+      // ── Delegation ──
+      case 'getDelegation':       result = getDelegation();                break;
+      case 'saveDelegationItem':  result = saveDelegationItem(params);     break;
+      case 'deleteDelegationItem': result = deleteDelegationItem(params);   break;
 
       default:
         result = { error: 'Unknown action: ' + action };
@@ -2113,6 +2119,27 @@ function removeSavedTwitchVideo(params) {
   var row = _findRow(S.SAVED_TWITCH_VIDEOS, 'video_id', params.video_id);
   if (row > 0) {
     _ss().getSheetByName(S.SAVED_TWITCH_VIDEOS).deleteRow(row);
+  }
+  return { success: true };
+}
+
+// ─── DELEGATION ───────────────────────────────────────────────
+
+function getDelegation() {
+  return { success: true, data: _readAll(S.DELEGATION) };
+}
+
+function saveDelegationItem(params) {
+  if (!params.id) params.id = _uuid();
+  params.added_at = _now();
+  _upsertRow(S.DELEGATION, 'id', params);
+  return { success: true, data: params };
+}
+
+function deleteDelegationItem(params) {
+  var row = _findRow(S.DELEGATION, 'id', params.id);
+  if (row > 0) {
+    _ss().getSheetByName(S.DELEGATION).deleteRow(row);
   }
   return { success: true };
 }

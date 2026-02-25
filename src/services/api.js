@@ -173,6 +173,11 @@ export const saveTwitchVideo = (params) => _call('saveTwitchVideo', params);
 export const removeSavedTwitchVideo = (video_id) => _call('removeSavedTwitchVideo', { video_id });
 export const saveTwitchDismissed = (item_id) => _call('saveTwitchDismissed', { item_id });
 
+// ─── Delegation ──────────────────────────────────────────────
+export const getDelegation = () => _call('getDelegation');
+export const saveDelegationItem = (params) => _call('saveDelegationItem', params);
+export const deleteDelegationItem = (id) => _call('deleteDelegationItem', { id });
+
 
 
 // ─── Helper: file → base64 ───────────────────────────────────

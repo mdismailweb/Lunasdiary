@@ -20,6 +20,7 @@ import BookmarksPage from './components/Bookmarks/BookmarksPage';
 import WritingPage from './components/Writing/WritingPage';
 import YearlyReviewPage from './components/YearlyReview/YearlyReviewPage';
 import TwitchPage from './components/Twitch/TwitchPage';
+import DelegationPage from './components/Delegation/DelegationPage';
 import QuickCapture from './components/Dashboard/QuickCapture';
 import * as api from './services/api';
 
@@ -68,6 +69,7 @@ export default function App() {
             case 'writing': return <WritingPage />;
             case 'yearlyreview': return <YearlyReviewPage />;
             case 'twitch': return <TwitchPage />;
+            case 'delegation': return <DelegationPage />;
             default: return <Dashboard onNavigate={navigate} />;
         }
     };

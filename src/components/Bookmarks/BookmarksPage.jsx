@@ -7,6 +7,7 @@ export default function BookmarksPage() {
     const [showAdd, setShowAdd] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [formData, setFormData] = useState({ title: '', url: '', tags: '', note: '' });
+    const [delegateBookmark, setDelegateBookmark] = useState(false);
 
     useEffect(() => {
         loadBookmarks();
@@ -36,8 +37,18 @@ export default function BookmarksPage() {
         try {
             await api.saveBookmark(newBookmark);
             setBookmarks([newBookmark, ...bookmarks]);
+            if (delegateBookmark) {
+                await api.saveDelegationItem({
+                    title: formData.title || formData.url,
+                    source: 'Bookmark',
+                    link: formData.url,
+                    category: 'Reading',
+                    importance: 'High'
+                });
+            }
             setShowAdd(false);
             setFormData({ title: '', url: '', tags: '', note: '' });
+            setDelegateBookmark(false);
         } catch (err) {
             alert('Failed to save bookmark');
         }
@@ -175,6 +186,10 @@ export default function BookmarksPage() {
                                 value={formData.note}
                                 onChange={e => setFormData({ ...formData, note: e.target.value })}
                             />
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: '#aaa', cursor: 'pointer' }}>
+                                <input type="checkbox" checked={delegateBookmark} onChange={e => setDelegateBookmark(e.target.checked)} />
+                                📥 Also add to Delegation
+                            </label>
                             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                                 <button type="button" onClick={() => setShowAdd(false)} style={{ flex: 1, padding: '0.9rem', borderRadius: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'white', cursor: 'pointer' }}>Cancel</button>
                                 <button type="submit" style={{ flex: 1, padding: '0.9rem', borderRadius: '12px', background: 'var(--brand-color, #a29bfe)', border: 'none', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}>Save Bookmark</button>

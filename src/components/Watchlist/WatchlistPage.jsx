@@ -56,7 +56,7 @@ export default function WatchlistPage() {
         }
     };
 
-    const addItem = async (item) => {
+    const addItem = async (item, shouldDelegate = false) => {
         const newItem = {
             id: Date.now().toString(),
             title: item.title,
@@ -70,6 +70,15 @@ export default function WatchlistPage() {
         try {
             await api.saveWatchlist(newItem);
             setItems([newItem, ...items]);
+            if (shouldDelegate) {
+                await api.saveDelegationItem({
+                    title: newItem.title,
+                    source: 'Watchlist',
+                    link: '',
+                    category: newItem.type === 'tv' ? 'TV Show' : 'Movie',
+                    importance: 'Medium'
+                });
+            }
             setShowAdd(false);
             setSearchQuery('');
             setSearchResults([]);

@@ -31,6 +31,7 @@ function TwitchVideoCard({ item, type, onPlay, onSave, onDismiss }) {
     const isLive = type === 'live';
     const isSaved = type === 'library';
     const isPending = type === 'pending';
+    const [shouldDelegate, setShouldDelegate] = useState(false);
 
     // Construct IDs for the player
     const channelName = isLive ? item.user_login : null;
@@ -69,16 +70,22 @@ function TwitchVideoCard({ item, type, onPlay, onSave, onDismiss }) {
             </div>
 
             {(isPending || isLive || isSaved) && (onSave || onDismiss || (isSaved && onSave)) && (
-                <div className="yt-pending-actions">
+                <div className="yt-pending-actions" style={{ flexDirection: (isPending || isLive) ? 'column' : 'row', gap: '8px', alignItems: 'flex-end' }}>
                     {onSave && !isSaved && (
-                        <button
-                            className="yt-approve-btn"
-                            onClick={(e) => { e.stopPropagation(); onSave(item, isLive); }}
-                            title={isLive ? "Bookmark Stream" : "Add to Library"}
-                            style={{ background: isLive ? 'rgba(169, 112, 255, 0.2)' : undefined, color: isLive ? '#a970ff' : undefined }}
-                        >
-                            ＋
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <label className="delegate-toggle" onClick={e => e.stopPropagation()} style={{ fontSize: '10px', color: '#888', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                                <input type="checkbox" checked={shouldDelegate} onChange={e => setShouldDelegate(e.target.checked)} style={{ width: '12px', height: '12px' }} />
+                                📥 Delegation
+                            </label>
+                            <button
+                                className="yt-approve-btn"
+                                onClick={(e) => { e.stopPropagation(); onSave(item, isLive, shouldDelegate); }}
+                                title={isLive ? "Bookmark Stream" : "Add to Library"}
+                                style={{ background: isLive ? 'rgba(169, 112, 255, 0.2)' : undefined, color: isLive ? '#a970ff' : undefined }}
+                            >
+                                ＋
+                            </button>
+                        </div>
                     )}
                     {isSaved && onSave && (
                         <button
@@ -188,12 +195,7 @@ export default function TwitchPage() {
         }
     };
 
-    const handleSave = async (item, isLive) => {
-        // Smart Save logic: If live, we try to find the video_id if possible, 
-        // but for now we'll save the stream info. 
-        // Twitch Helix doesn't always have a 1:1 stream_id -> video_id mapping 
-        // until the stream ends. Improving this might need a back-end job.
-
+    const handleSave = async (item, isLive, shouldDelegate = false) => {
         const payload = {
             video_id: item.video_id || item.id,
             title: item.title,
@@ -209,6 +211,16 @@ export default function TwitchPage() {
         try {
             await api.saveTwitchVideo(payload);
             setLibrary(prev => [payload, ...prev]);
+
+            if (shouldDelegate) {
+                await api.saveDelegationItem({
+                    title: payload.title,
+                    source: 'Twitch',
+                    link: payload.url,
+                    category: isLive ? 'Live Stream' : 'VOD',
+                    importance: 'High'
+                });
+            }
         } catch (err) {
             console.error('Save twitch video error:', err);
         }
