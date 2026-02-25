@@ -221,9 +221,10 @@ function doPost(e) {
       case 'saveYouTubeVideo':     result = saveYouTubeVideo(params);       break;
 
       // ── Delegation ──
-      case 'getDelegation':       result = getDelegation();                break;
-      case 'saveDelegationItem':  result = saveDelegationItem(params);     break;
-      case 'deleteDelegationItem': result = deleteDelegationItem(params);   break;
+      case 'getDelegation':         result = getDelegation();                  break;
+      case 'saveDelegationItem':    result = saveDelegationItem(params);       break;
+      case 'deleteDelegationItem':  result = deleteDelegationItem(params);     break;
+      case 'updateDelegationRank':  result = updateDelegationRank(params);     break;
 
       default:
         result = { error: 'Unknown action: ' + action };
@@ -512,7 +513,7 @@ function initializeApp() {
   sheetDefs[S.TWITCH_DISMISSED] = ['item_id', 'dismissed_at'];
   sheetDefs[S.TWITCH_CONFIG] = ['client_id', 'client_secret'];
   sheetDefs[S.SAVED_TWITCH_VIDEOS] = ['video_id', 'title', 'user_name', 'user_id', 'thumbnail_url', 'created_at', 'type', 'url', 'duration', 'saved_at'];
-  sheetDefs[S.DELEGATION] = ['id', 'title', 'source', 'link', 'category', 'importance', 'note', 'added_at'];
+  sheetDefs[S.DELEGATION] = ['id', 'title', 'source', 'link', 'category', 'importance', 'note', 'added_at', 'rank'];
 
   var created = [];
   Object.keys(sheetDefs).forEach(function(name) {
@@ -2131,9 +2132,8 @@ function getDelegation() {
   var ss = _ss();
   var sheet = ss.getSheetByName(S.DELEGATION);
   if (!sheet) {
-    // Auto-create the sheet if it doesn't exist yet
     sheet = ss.insertSheet(S.DELEGATION);
-    sheet.appendRow(['id', 'title', 'source', 'link', 'category', 'importance', 'note', 'added_at']);
+    sheet.appendRow(['id', 'title', 'source', 'link', 'category', 'importance', 'note', 'added_at', 'rank']);
     return { success: true, data: [] };
   }
   return { success: true, data: _sheetToObjects(S.DELEGATION) };
@@ -2145,7 +2145,7 @@ function saveDelegationItem(params) {
   var sheet = ss.getSheetByName(S.DELEGATION);
   if (!sheet) {
     sheet = ss.insertSheet(S.DELEGATION);
-    sheet.appendRow(['id', 'title', 'source', 'link', 'category', 'importance', 'note', 'added_at']);
+    sheet.appendRow(['id', 'title', 'source', 'link', 'category', 'importance', 'note', 'added_at', 'rank']);
   }
   if (!params.id) params.id = Utilities.getUuid();
   params.added_at = _now();
@@ -2171,6 +2171,21 @@ function deleteDelegationItem(params) {
   var row = _findRow(S.DELEGATION, 'id', params.id);
   if (row > 0) {
     sheet.deleteRow(row);
+  }
+  return { success: true };
+}
+
+function updateDelegationRank(params) {
+  // params: { id, rank }
+  var ss = _ss();
+  var sheet = ss.getSheetByName(S.DELEGATION);
+  if (!sheet) return { success: false, error: 'DELEGATION sheet not found' };
+  var row = _findRow(S.DELEGATION, 'id', params.id);
+  if (row < 0) return { success: false, error: 'Item not found' };
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var rankCol = headers.indexOf('rank');
+  if (rankCol >= 0) {
+    sheet.getRange(row, rankCol + 1).setValue(params.rank);
   }
   return { success: true };
 }

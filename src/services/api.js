@@ -177,6 +177,7 @@ export const saveTwitchDismissed = (item_id) => _call('saveTwitchDismissed', { i
 export const getDelegation = () => _call('getDelegation');
 export const saveDelegationItem = (params) => _call('saveDelegationItem', params);
 export const deleteDelegationItem = (id) => _call('deleteDelegationItem', { id });
+export const updateDelegationRank = (id, rank) => _call('updateDelegationRank', { id, rank });
 
 
 

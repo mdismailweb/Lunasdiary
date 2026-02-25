@@ -3,103 +3,126 @@ import * as api from '../../services/api';
 
 const CATEGORIES = ['All', 'Live Stream', 'VOD', 'Video', 'Reading', 'Movie', 'TV Show', 'Podcast', 'Other'];
 const IMPORTANCE = ['High', 'Medium', 'Low'];
-const SOURCES = ['Twitch', 'YouTube', 'Bookmark', 'Watchlist', 'Manual'];
+const SOURCES = ['Manual', 'Twitch', 'YouTube', 'Bookmark', 'Watchlist'];
 
-const SOURCE_ICONS = {
-    Twitch: '🎮', YouTube: '📺', Bookmark: '🔖', Watchlist: '🎬', Manual: '✍️'
-};
-const IMPORTANCE_COLORS = {
-    High: '#ff6b6b', Medium: '#ffa94d', Low: '#74c0fc'
-};
+const SOURCE_ICONS = { Twitch: '🎮', YouTube: '📺', Bookmark: '🔖', Watchlist: '🎬', Manual: '✍️' };
+const IMPORTANCE_COLORS = { High: '#ff6b6b', Medium: '#ffa94d', Low: '#74c0fc' };
+const RANK_BADGES = { 1: '🥇', 2: '🥈', 3: '🥉' };
+
+function formatDateTime(iso) {
+    if (!iso) return '';
+    try {
+        const d = new Date(iso);
+        return d.toLocaleString('en-US', {
+            day: 'numeric', month: 'short', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: true
+        });
+    } catch { return iso; }
+}
 
 function timeAgo(iso) {
     if (!iso) return '';
-    const days = Math.floor((Date.now() - new Date(iso)) / 86400000);
-    if (days === 0) return 'Today';
+    const diff = Date.now() - new Date(iso);
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
     if (days === 1) return 'Yesterday';
     if (days < 7) return `${days}d ago`;
     return `${Math.floor(days / 7)}w ago`;
 }
 
-function DelegationCard({ item, onDelete }) {
+function DelegationCard({ item, rank, totalItems, onDelete, onRankUp, onRankDown }) {
     const [confirming, setConfirming] = useState(false);
+    const [rankLoading, setRankLoading] = useState(false);
 
-    const handleDelete = async () => {
-        if (!confirming) { setConfirming(true); return; }
-        await onDelete(item.id);
+    const handleRank = async (dir) => {
+        setRankLoading(true);
+        await (dir === 'up' ? onRankUp(item.id) : onRankDown(item.id));
+        setRankLoading(false);
     };
+
+    const numRank = item.rank ? parseInt(item.rank) : null;
+    const badge = numRank && RANK_BADGES[numRank] ? RANK_BADGES[numRank] : null;
 
     return (
         <div style={{
             background: 'var(--card-bg)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: '20px',
-            padding: '1.5rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
-            position: 'relative',
-            transition: 'border-color 0.2s',
+            border: `1px solid ${numRank === 1 ? 'rgba(255,215,0,0.25)' : 'rgba(255,255,255,0.08)'}`,
+            borderRadius: '20px', padding: '1.4rem',
+            display: 'flex', flexDirection: 'column', gap: '0.9rem',
+            position: 'relative', transition: 'border-color 0.2s, transform 0.15s',
         }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'}
-            onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = numRank === 1 ? 'rgba(255,215,0,0.25)' : 'rgba(255,255,255,0.08)'; e.currentTarget.style.transform = 'translateY(0)'; }}
         >
-            {/* Importance badge */}
-            <div style={{
-                position: 'absolute', top: '1rem', right: '1rem',
-                background: IMPORTANCE_COLORS[item.importance] + '22',
-                color: IMPORTANCE_COLORS[item.importance],
-                borderRadius: '8px', padding: '3px 10px', fontSize: '0.7rem', fontWeight: 700,
-                border: `1px solid ${IMPORTANCE_COLORS[item.importance]}44`
-            }}>
-                {item.importance || 'Medium'}
+            {/* Rank badge + Importance badge */}
+            <div style={{ position: 'absolute', top: '1rem', right: '1rem', display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                {badge && <span style={{ fontSize: '1.1rem' }}>{badge}</span>}
+                <div style={{
+                    background: (IMPORTANCE_COLORS[item.importance] || '#aaa') + '22',
+                    color: IMPORTANCE_COLORS[item.importance] || '#aaa',
+                    borderRadius: '8px', padding: '2px 9px', fontSize: '0.68rem', fontWeight: 700,
+                    border: `1px solid ${(IMPORTANCE_COLORS[item.importance] || '#aaa')}44`
+                }}>
+                    {item.importance || 'Medium'}
+                </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.8rem', paddingRight: '5rem' }}>
-                <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>
-                    {SOURCE_ICONS[item.source] || '📋'}
-                </span>
+            {/* Title + source */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', paddingRight: '6rem' }}>
+                <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{SOURCE_ICONS[item.source] || '📋'}</span>
                 <div>
-                    <h3 style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.4 }}>{item.title}</h3>
-                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                    <h3 style={{ margin: 0, fontSize: '0.92rem', lineHeight: 1.4 }}>{item.title}</h3>
+                    <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.35rem', flexWrap: 'wrap', alignItems: 'center' }}>
                         {item.category && (
-                            <span style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 10px', borderRadius: '20px', fontSize: '0.7rem', opacity: 0.8 }}>
+                            <span style={{ background: 'rgba(255,255,255,0.06)', padding: '2px 9px', borderRadius: '20px', fontSize: '0.68rem', opacity: 0.8 }}>
                                 {item.category}
                             </span>
                         )}
-                        <span style={{ fontSize: '0.7rem', opacity: 0.4 }}>
-                            {item.source} · {timeAgo(item.added_at)}
-                        </span>
+                        <span style={{ fontSize: '0.68rem', opacity: 0.45 }}>{item.source}</span>
                     </div>
                 </div>
             </div>
 
+            {/* Timestamp */}
+            {item.added_at && (
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.72rem', opacity: 0.35 }}>🕐</span>
+                    <span style={{ fontSize: '0.72rem', opacity: 0.5 }}>{formatDateTime(item.added_at)}</span>
+                    <span style={{ fontSize: '0.68rem', opacity: 0.3 }}>· {timeAgo(item.added_at)}</span>
+                </div>
+            )}
+
             {item.note && (
-                <p style={{ margin: 0, fontSize: '0.82rem', opacity: 0.55, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.5, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {item.note}
                 </p>
             )}
 
-            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: 'auto' }}>
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: 'auto', flexWrap: 'wrap' }}>
+                {/* Rank controls */}
+                <div style={{ display: 'flex', gap: '0.3rem' }}>
+                    <button onClick={() => handleRank('up')} disabled={rankLoading || rank === 0} title="Raise priority" style={rankBtnStyle(rank === 0)}>↑</button>
+                    <button onClick={() => handleRank('down')} disabled={rankLoading || rank === totalItems - 1} title="Lower priority" style={rankBtnStyle(rank === totalItems - 1)}>↓</button>
+                </div>
                 {item.link && (
                     <a href={item.link} target="_blank" rel="noopener noreferrer" style={{
-                        flex: 1, padding: '0.55rem 1rem', borderRadius: '10px',
-                        background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                        color: 'white', textDecoration: 'none', fontSize: '0.8rem', textAlign: 'center',
-                        transition: 'background 0.2s'
-                    }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                    >
-                        Open ↗
-                    </a>
+                        flex: 1, padding: '0.5rem 0.9rem', borderRadius: '10px', minWidth: 0,
+                        background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)',
+                        color: 'white', textDecoration: 'none', fontSize: '0.78rem', textAlign: 'center',
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+                    }}>Open ↗</a>
                 )}
-                <button onClick={handleDelete} style={{
-                    padding: '0.55rem 1rem', borderRadius: '10px',
+                <button onClick={() => { if (!confirming) { setConfirming(true); return; } onDelete(item.id); }} style={{
+                    padding: '0.5rem 0.9rem', borderRadius: '10px', whiteSpace: 'nowrap',
                     background: confirming ? 'rgba(255,107,107,0.2)' : 'transparent',
-                    border: confirming ? '1px solid #ff6b6b' : '1px solid rgba(255,255,255,0.1)',
-                    color: confirming ? '#ff6b6b' : 'rgba(255,255,255,0.4)',
-                    cursor: 'pointer', fontSize: '0.8rem', transition: 'all 0.2s'
+                    border: confirming ? '1px solid #ff6b6b' : '1px solid rgba(255,255,255,0.09)',
+                    color: confirming ? '#ff6b6b' : 'rgba(255,255,255,0.35)',
+                    cursor: 'pointer', fontSize: '0.78rem', transition: 'all 0.2s'
                 }}>
                     {confirming ? 'Confirm?' : '✕ Done'}
                 </button>
@@ -107,6 +130,14 @@ function DelegationCard({ item, onDelete }) {
         </div>
     );
 }
+
+const rankBtnStyle = (disabled) => ({
+    width: '30px', height: '30px', borderRadius: '8px',
+    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)',
+    color: disabled ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.6)',
+    cursor: disabled ? 'not-allowed' : 'pointer', fontSize: '0.85rem',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s'
+});
 
 function QuickAddModal({ onClose, onSave }) {
     const [form, setForm] = useState({ title: '', link: '', source: 'Manual', category: 'Other', importance: 'High', note: '' });
@@ -116,58 +147,54 @@ function QuickAddModal({ onClose, onSave }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!form.title.trim()) return;
-        setSaving(true);
-        setError('');
+        setSaving(true); setError('');
         try {
             await onSave(form);
             onClose();
         } catch (err) {
-            console.error('Delegation save failed:', err);
             setError(err?.message || 'Failed to save. Check your Apps Script deployment.');
-        } finally {
-            setSaving(false);
-        }
+        } finally { setSaving(false); }
     };
 
-    const field = (label, key, type = 'text', opts = {}) => (
+    const F = (label, key, type = 'text', opts = {}) => (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            <label style={{ fontSize: '0.8rem', opacity: 0.6, fontWeight: 600 }}>{label}</label>
+            <label style={{ fontSize: '0.78rem', opacity: 0.55, fontWeight: 600 }}>{label}</label>
             {opts.as === 'select' ? (
                 <select value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} style={inputStyle}>
                     {opts.options.map(o => <option key={o} value={o} style={{ background: '#1a1a2e', color: '#fff' }}>{o}</option>)}
                 </select>
             ) : opts.as === 'textarea' ? (
-                <textarea rows={3} value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} placeholder={opts.placeholder || ''} style={{ ...inputStyle, resize: 'none' }} />
+                <textarea rows={3} value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} placeholder={opts.ph || ''} style={{ ...inputStyle, resize: 'none' }} />
             ) : (
-                <input type={type} value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} placeholder={opts.placeholder || ''} style={inputStyle} />
+                <input type={type} value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} placeholder={opts.ph || ''} style={inputStyle} />
             )}
         </div>
     );
 
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000 }}>
-            <div style={{ background: 'var(--card-bg)', borderRadius: '24px', padding: '2rem', width: '480px', maxWidth: '90vw', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 30px 60px rgba(0,0,0,0.5)' }}>
+            <div style={{ background: 'var(--card-bg)', borderRadius: '24px', padding: '2rem', width: '480px', maxWidth: '92vw', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 30px 60px rgba(0,0,0,0.5)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <h2 style={{ margin: 0, fontSize: '1.3rem' }}>📥 Add to Delegation</h2>
-                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: '1.3rem' }}>✕</button>
+                    <h2 style={{ margin: 0, fontSize: '1.2rem' }}>📥 Add to Delegation</h2>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: '1.2rem' }}>✕</button>
                 </div>
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {field('Title *', 'title', 'text', { placeholder: 'e.g. "Watch this stream later"' })}
-                    {field('Link (optional)', 'link', 'url', { placeholder: 'https://...' })}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-                        {field('Source', 'source', 'text', { as: 'select', options: SOURCES })}
-                        {field('Category', 'category', 'text', { as: 'select', options: CATEGORIES.filter(c => c !== 'All') })}
-                        {field('Importance', 'importance', 'text', { as: 'select', options: IMPORTANCE })}
+                    {F('Title *', 'title', 'text', { ph: 'e.g. "Watch this stream later"' })}
+                    {F('Link (optional)', 'link', 'url', { ph: 'https://...' })}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                        {F('Source', 'source', 'text', { as: 'select', options: SOURCES })}
+                        {F('Category', 'category', 'text', { as: 'select', options: CATEGORIES.filter(c => c !== 'All') })}
+                        {F('Importance', 'importance', 'text', { as: 'select', options: IMPORTANCE })}
                     </div>
-                    {field('Note (optional)', 'note', 'text', { as: 'textarea', placeholder: 'Why is this important?' })}
+                    {F('Note (optional)', 'note', 'text', { as: 'textarea', ph: 'Why is this important?' })}
                     {error && (
                         <p style={{ margin: 0, color: '#ff6b6b', fontSize: '0.8rem', padding: '0.5rem 0.75rem', background: 'rgba(255,107,107,0.1)', borderRadius: '8px', border: '1px solid rgba(255,107,107,0.3)' }}>
                             ⚠️ {error}
                         </p>
                     )}
-                    <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                        <button type="button" onClick={onClose} style={{ flex: 1, padding: '0.9rem', borderRadius: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'white', cursor: 'pointer' }}>Cancel</button>
-                        <button type="submit" disabled={saving} style={{ flex: 2, padding: '0.9rem', borderRadius: '12px', background: 'linear-gradient(135deg, #a970ff, #7c4dff)', border: 'none', color: 'white', fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
+                    <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
+                        <button type="button" onClick={onClose} style={{ flex: 1, padding: '0.85rem', borderRadius: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'white', cursor: 'pointer' }}>Cancel</button>
+                        <button type="submit" disabled={saving} style={{ flex: 2, padding: '0.85rem', borderRadius: '12px', background: 'linear-gradient(135deg, #a970ff, #7c4dff)', border: 'none', color: 'white', fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
                             {saving ? 'Delegating…' : '📥 Delegate This'}
                         </button>
                     </div>
@@ -177,16 +204,22 @@ function QuickAddModal({ onClose, onSave }) {
     );
 }
 
-const inputStyle = {
-    padding: '0.75rem 1rem', borderRadius: '10px',
-    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-    color: 'white', fontSize: '0.9rem', width: '100%', boxSizing: 'border-box'
-};
+const inputStyle = { padding: '0.7rem 0.9rem', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontSize: '0.88rem', width: '100%', boxSizing: 'border-box' };
+
+const SORT_OPTIONS = [
+    { key: 'rank', label: '🏅 Rank' },
+    { key: 'date_new', label: '📅 Newest' },
+    { key: 'date_old', label: '📅 Oldest' },
+    { key: 'importance', label: '⭐ Importance' },
+];
+
+const IMPORTANCE_ORDER = { High: 0, Medium: 1, Low: 2 };
 
 export default function DelegationPage() {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState('All');
+    const [sortKey, setSortKey] = useState('rank');
     const [showAdd, setShowAdd] = useState(false);
 
     useEffect(() => { loadItems(); }, []);
@@ -195,21 +228,16 @@ export default function DelegationPage() {
         setLoading(true);
         try {
             const res = await api.getDelegation();
-            // Backend returns { success, data: [...] }, _call unwraps outer, so res = { success, data: [...] }
             const list = Array.isArray(res) ? res : (res?.data || []);
-            setItems([...list].reverse());
-        } catch (err) {
-            console.error('Failed to load delegation items', err);
-        } finally {
-            setLoading(false);
-        }
+            setItems(list);
+        } catch (err) { console.error('Failed to load delegation items', err); }
+        finally { setLoading(false); }
     };
 
     const handleSave = async (form) => {
         const res = await api.saveDelegationItem(form);
-        // Backend returns { success, data: { ...savedItem } }
         const saved = res?.data || res;
-        if (!saved || !saved.id) throw new Error('Unexpected response from server. Check your Apps Script deployment.');
+        if (!saved || !saved.id) throw new Error('Unexpected response. Check your Apps Script deployment.');
         setItems(prev => [saved, ...prev]);
     };
 
@@ -218,7 +246,38 @@ export default function DelegationPage() {
         setItems(prev => prev.filter(i => i.id !== id));
     };
 
-    const filtered = activeCategory === 'All' ? items : items.filter(i => i.category === activeCategory);
+    const handleRankChange = async (id, direction) => {
+        setItems(prev => {
+            const arr = [...prev];
+            const idx = arr.findIndex(i => i.id === id);
+            if (idx < 0) return prev;
+            const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+            if (swapIdx < 0 || swapIdx >= arr.length) return prev;
+            // Swap rank numbers
+            const rankA = parseInt(arr[idx].rank) || idx + 1;
+            const rankB = parseInt(arr[swapIdx].rank) || swapIdx + 1;
+            arr[idx] = { ...arr[idx], rank: rankB };
+            arr[swapIdx] = { ...arr[swapIdx], rank: rankA };
+            // Persist both
+            api.updateDelegationRank(arr[idx].id, rankB).catch(console.error);
+            api.updateDelegationRank(arr[swapIdx].id, rankA).catch(console.error);
+            return arr;
+        });
+    };
+
+    const sortedItems = [...items].sort((a, b) => {
+        if (sortKey === 'rank') {
+            const ra = parseInt(a.rank) || 9999;
+            const rb = parseInt(b.rank) || 9999;
+            return ra - rb || new Date(b.added_at) - new Date(a.added_at);
+        }
+        if (sortKey === 'date_new') return new Date(b.added_at) - new Date(a.added_at);
+        if (sortKey === 'date_old') return new Date(a.added_at) - new Date(b.added_at);
+        if (sortKey === 'importance') return (IMPORTANCE_ORDER[a.importance] ?? 1) - (IMPORTANCE_ORDER[b.importance] ?? 1);
+        return 0;
+    });
+
+    const filtered = activeCategory === 'All' ? sortedItems : sortedItems.filter(i => i.category === activeCategory);
 
     const counts = CATEGORIES.reduce((acc, c) => {
         acc[c] = c === 'All' ? items.length : items.filter(i => i.category === c).length;
@@ -226,57 +285,74 @@ export default function DelegationPage() {
     }, {});
 
     return (
-        <div className="fade-in" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
+        <div className="fade-in" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.75rem', maxWidth: '1200px', margin: '0 auto' }}>
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
-                    <h1 style={{ margin: 0, fontSize: '2rem', background: 'linear-gradient(135deg, #a970ff, #7c4dff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                    <h1 style={{ margin: 0, fontSize: '1.9rem', background: 'linear-gradient(135deg, #a970ff, #7c4dff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                         📥 Delegation
                     </h1>
-                    <p style={{ margin: '6px 0 0 0', opacity: 0.5, fontSize: '0.9rem' }}>
-                        {items.length} item{items.length !== 1 ? 's' : ''} waiting · Things that matter, but can wait
+                    <p style={{ margin: '5px 0 0 0', opacity: 0.45, fontSize: '0.88rem' }}>
+                        {items.length} item{items.length !== 1 ? 's' : ''} · Things that matter, but can wait
                     </p>
                 </div>
-                <button
-                    onClick={() => setShowAdd(true)}
-                    style={{ padding: '0.8rem 1.6rem', borderRadius: '14px', background: 'linear-gradient(135deg, #a970ff, #7c4dff)', border: 'none', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: '0.95rem', boxShadow: '0 4px 16px rgba(169,112,255,0.3)' }}
-                >
+                <button onClick={() => setShowAdd(true)} style={{ padding: '0.75rem 1.5rem', borderRadius: '14px', background: 'linear-gradient(135deg, #a970ff, #7c4dff)', border: 'none', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem', boxShadow: '0 4px 16px rgba(169,112,255,0.3)' }}>
                     + Add Item
                 </button>
             </div>
 
-            {/* Category pills */}
-            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-                {CATEGORIES.filter(c => counts[c] > 0 || c === 'All').map(cat => (
-                    <button key={cat} onClick={() => setActiveCategory(cat)} style={{
-                        padding: '0.45rem 1.1rem', borderRadius: '20px', cursor: 'pointer',
-                        border: `1px solid ${activeCategory === cat ? '#a970ff' : 'rgba(255,255,255,0.1)'}`,
-                        background: activeCategory === cat ? 'rgba(169,112,255,0.18)' : 'rgba(255,255,255,0.04)',
-                        color: activeCategory === cat ? '#a970ff' : 'rgba(255,255,255,0.6)',
-                        fontWeight: activeCategory === cat ? 700 : 400,
-                        fontSize: '0.82rem', transition: 'all 0.2s'
-                    }}>
-                        {cat} {counts[cat] > 0 && <span style={{ opacity: 0.6, marginLeft: '4px' }}>{counts[cat]}</span>}
-                    </button>
-                ))}
-            </div>
-
-            {/* Items grid */}
-            {loading ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.2rem' }}>
-                    {[...Array(6)].map((_, i) => (
-                        <div key={i} className="skeleton" style={{ height: '160px', borderRadius: '20px' }} />
+            {/* Controls row: categories + sort */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                {/* Category pills */}
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {CATEGORIES.filter(c => counts[c] > 0 || c === 'All').map(cat => (
+                        <button key={cat} onClick={() => setActiveCategory(cat)} style={{
+                            padding: '0.4rem 1rem', borderRadius: '20px', cursor: 'pointer',
+                            border: `1px solid ${activeCategory === cat ? '#a970ff' : 'rgba(255,255,255,0.1)'}`,
+                            background: activeCategory === cat ? 'rgba(169,112,255,0.18)' : 'rgba(255,255,255,0.04)',
+                            color: activeCategory === cat ? '#a970ff' : 'rgba(255,255,255,0.55)',
+                            fontWeight: activeCategory === cat ? 700 : 400, fontSize: '0.78rem', transition: 'all 0.2s'
+                        }}>
+                            {cat}{counts[cat] > 0 && <span style={{ opacity: 0.55, marginLeft: '4px' }}>{counts[cat]}</span>}
+                        </button>
                     ))}
                 </div>
+                {/* Sort selector */}
+                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', opacity: 0.4 }}>Sort:</span>
+                    {SORT_OPTIONS.map(s => (
+                        <button key={s.key} onClick={() => setSortKey(s.key)} style={{
+                            padding: '0.35rem 0.85rem', borderRadius: '10px', cursor: 'pointer', fontSize: '0.75rem',
+                            border: `1px solid ${sortKey === s.key ? '#a970ff' : 'rgba(255,255,255,0.1)'}`,
+                            background: sortKey === s.key ? 'rgba(169,112,255,0.15)' : 'transparent',
+                            color: sortKey === s.key ? '#a970ff' : 'rgba(255,255,255,0.5)', transition: 'all 0.2s'
+                        }}>{s.label}</button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Grid */}
+            {loading ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.2rem' }}>
+                    {[...Array(6)].map((_, i) => <div key={i} className="skeleton" style={{ height: '175px', borderRadius: '20px' }} />)}
+                </div>
             ) : filtered.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '5rem', opacity: 0.4, border: '2px dashed rgba(255,255,255,0.1)', borderRadius: '24px' }}>
+                <div style={{ textAlign: 'center', padding: '5rem', opacity: 0.35, border: '2px dashed rgba(255,255,255,0.1)', borderRadius: '24px' }}>
                     <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📥</div>
                     <p>Nothing delegated yet.<br />Use the "📥 Delegation" toggle when saving streams, videos, or bookmarks!</p>
                 </div>
             ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.2rem' }}>
-                    {filtered.map(item => (
-                        <DelegationCard key={item.id} item={item} onDelete={handleDelete} />
+                    {filtered.map((item, idx) => (
+                        <DelegationCard
+                            key={item.id}
+                            item={item}
+                            rank={idx}
+                            totalItems={filtered.length}
+                            onDelete={handleDelete}
+                            onRankUp={(id) => handleRankChange(id, 'up')}
+                            onRankDown={(id) => handleRankChange(id, 'down')}
+                        />
                     ))}
                 </div>
             )}

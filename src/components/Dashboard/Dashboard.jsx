@@ -10,6 +10,7 @@ import RecentVideos from './RecentVideos';
 import ToBeViewedVideos from './ToBeViewedVideos';
 import DashboardActivityGraph from './DashboardActivityGraph';
 import TwitchRecent from './TwitchRecent';
+import DelegationWidget from './DelegationWidget';
 
 const DAILY_PROMPTS = [
     "What's one thing you want to focus on today?",
@@ -82,6 +83,9 @@ export default function Dashboard({ onNavigate }) {
 
             {/* Twitch Recent Activity */}
             <TwitchRecent onNavigate={onNavigate} />
+
+            {/* Delegation */}
+            <DelegationWidget onNavigate={onNavigate} />
 
             {/* Recent Videos from subscribed channels */}
             <RecentVideos onNavigate={onNavigate} />
