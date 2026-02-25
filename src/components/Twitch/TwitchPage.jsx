@@ -233,7 +233,8 @@ export default function TwitchPage() {
         }
     };
 
-    // Filter Logic
+    const handlePlay = (ch, vid) => setActivePlayer({ channel: ch, videoId: vid });
+
     // Filter Logic - Using String() to avoid ID type mismatches (String vs Number)
     const filteredStreams = selected ? streams.filter(s => String(s.user_id) === String(selected)) : streams;
     const filteredLibrary = selected ? library.filter(v => String(v.user_id) === String(selected)) : library;
@@ -310,7 +311,7 @@ export default function TwitchPage() {
                                             key={s.id}
                                             item={s}
                                             type="live"
-                                            onPlay={(ch, vid) => setActivePlayer({ channel: ch, videoId: vid })}
+                                            onPlay={handlePlay}
                                             onSave={handleSave}
                                         />
                                     ))}
@@ -331,7 +332,7 @@ export default function TwitchPage() {
                                             key={v.id}
                                             item={v}
                                             type="pending"
-                                            onPlay={(ch, vid) => setActivePlayer({ channel: ch, videoId: vid })}
+                                            onPlay={handlePlay}
                                             onSave={handleSave}
                                             onDismiss={handleDismiss}
                                         />
