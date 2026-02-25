@@ -513,7 +513,7 @@ function initializeApp() {
   sheetDefs[S.TWITCH_DISMISSED] = ['item_id', 'dismissed_at'];
   sheetDefs[S.TWITCH_CONFIG] = ['client_id', 'client_secret'];
   sheetDefs[S.SAVED_TWITCH_VIDEOS] = ['video_id', 'title', 'user_name', 'user_id', 'thumbnail_url', 'created_at', 'type', 'url', 'duration', 'saved_at'];
-  sheetDefs[S.DELEGATION] = ['id', 'title', 'source', 'link', 'category', 'importance', 'note', 'added_at', 'rank'];
+  sheetDefs[S.DELEGATION] = ['id', 'title', 'source', 'link', 'category', 'importance', 'note', 'added_at', 'rank', 'due_date'];
 
   var created = [];
   Object.keys(sheetDefs).forEach(function(name) {
@@ -2133,7 +2133,7 @@ function getDelegation() {
   var sheet = ss.getSheetByName(S.DELEGATION);
   if (!sheet) {
     sheet = ss.insertSheet(S.DELEGATION);
-    sheet.appendRow(['id', 'title', 'source', 'link', 'category', 'importance', 'note', 'added_at', 'rank']);
+    sheet.appendRow(['id', 'title', 'source', 'link', 'category', 'importance', 'note', 'added_at', 'rank', 'due_date']);
     return { success: true, data: [] };
   }
   return { success: true, data: _sheetToObjects(S.DELEGATION) };

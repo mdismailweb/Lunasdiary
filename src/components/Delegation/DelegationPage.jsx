@@ -87,14 +87,33 @@ function DelegationCard({ item, rank, totalItems, onDelete, onRankUp, onRankDown
                 </div>
             </div>
 
-            {/* Timestamp */}
-            {item.added_at && (
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.72rem', opacity: 0.35 }}>🕐</span>
-                    <span style={{ fontSize: '0.72rem', opacity: 0.5 }}>{formatDateTime(item.added_at)}</span>
-                    <span style={{ fontSize: '0.68rem', opacity: 0.3 }}>· {timeAgo(item.added_at)}</span>
-                </div>
-            )}
+            {/* Timestamps */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                {item.added_at && (
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.68rem', opacity: 0.3 }}>🕐 Added:</span>
+                        <span style={{ fontSize: '0.7rem', opacity: 0.45 }}>{formatDateTime(item.added_at)}</span>
+                        <span style={{ fontSize: '0.65rem', opacity: 0.28 }}>· {timeAgo(item.added_at)}</span>
+                    </div>
+                )}
+                {item.due_date && (() => {
+                    const due = new Date(item.due_date);
+                    const now = Date.now();
+                    const diff = due - now;
+                    const isOverdue = diff < 0;
+                    const isSoon = diff > 0 && diff < 24 * 60 * 60 * 1000;
+                    const color = isOverdue ? '#ff6b6b' : isSoon ? '#ffa94d' : 'rgba(255,255,255,0.55)';
+                    const label = isOverdue ? '🔴 Overdue:' : isSoon ? '🟡 Due soon:' : '📅 Due:';
+                    return (
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: isOverdue ? 'rgba(255,107,107,0.08)' : isSoon ? 'rgba(255,169,77,0.08)' : 'transparent', borderRadius: '6px', padding: isOverdue || isSoon ? '2px 6px' : '0', marginLeft: '-6px' }}>
+                            <span style={{ fontSize: '0.68rem', color, fontWeight: isOverdue || isSoon ? 700 : 400 }}>{label}</span>
+                            <span style={{ fontSize: '0.7rem', color, fontWeight: isOverdue || isSoon ? 700 : 400 }}>
+                                {due.toLocaleString('en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true })}
+                            </span>
+                        </div>
+                    );
+                })()}
+            </div>
 
             {item.note && (
                 <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.5, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
@@ -140,7 +159,7 @@ const rankBtnStyle = (disabled) => ({
 });
 
 function QuickAddModal({ onClose, onSave }) {
-    const [form, setForm] = useState({ title: '', link: '', source: 'Manual', category: 'Other', importance: 'High', note: '' });
+    const [form, setForm] = useState({ title: '', link: '', source: 'Manual', category: 'Other', importance: 'High', note: '', due_date: '' });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
@@ -185,6 +204,16 @@ function QuickAddModal({ onClose, onSave }) {
                         {F('Source', 'source', 'text', { as: 'select', options: SOURCES })}
                         {F('Category', 'category', 'text', { as: 'select', options: CATEGORIES.filter(c => c !== 'All') })}
                         {F('Importance', 'importance', 'text', { as: 'select', options: IMPORTANCE })}
+                    </div>
+                    {/* Due date/time picker */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <label style={{ fontSize: '0.78rem', opacity: 0.55, fontWeight: 600 }}>📅 Due Date & Time (optional)</label>
+                        <input
+                            type="datetime-local"
+                            value={form.due_date}
+                            onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))}
+                            style={{ ...inputStyle, colorScheme: 'dark' }}
+                        />
                     </div>
                     {F('Note (optional)', 'note', 'text', { as: 'textarea', ph: 'Why is this important?' })}
                     {error && (
