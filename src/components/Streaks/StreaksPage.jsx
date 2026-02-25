@@ -12,16 +12,12 @@ export default function StreaksPage() {
         loadData();
     }, []);
 
-    const normalizeDate = (dateVal) => {
-        if (!dateVal) return '';
-        // If it's a date object or a full ISO string, extract just the YYYY-MM-DD
-        return String(dateVal).split('T')[0];
-    };
-
-    const getLocalToday = () => {
-        const d = new Date();
+    const toLocalDateString = (date) => {
+        const d = new Date(date);
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     };
+
+    const getLocalToday = () => toLocalDateString(new Date());
 
     const loadData = async () => {
         try {
@@ -67,7 +63,7 @@ export default function StreaksPage() {
     const calculateCurrentStreak = (streakId) => {
         const streakLogs = logs
             .filter(l => String(l.streak_id) === String(streakId))
-            .map(l => normalizeDate(l.date))
+            .map(l => toLocalDateString(l.date))
             .sort((a, b) => b.localeCompare(a));
 
         if (streakLogs.length === 0) return 0;
@@ -82,7 +78,7 @@ export default function StreaksPage() {
         }
 
         while (true) {
-            const dStr = normalizeDate(checkDate.toISOString());
+            const dStr = toLocalDateString(checkDate);
             if (streakLogs.includes(dStr)) {
                 count++;
                 checkDate.setDate(checkDate.getDate() - 1);
@@ -95,7 +91,7 @@ export default function StreaksPage() {
 
     const isTodayLogged = (streakId) => {
         const today = getLocalToday();
-        return logs.some(l => String(l.streak_id) === String(streakId) && normalizeDate(l.date) === today);
+        return logs.some(l => String(l.streak_id) === String(streakId) && toLocalDateString(l.date) === today);
     };
 
     const ActivityGraph = ({ streakId }) => {
@@ -105,8 +101,8 @@ export default function StreaksPage() {
         for (let i = 29; i >= 0; i--) {
             const d = new Date();
             d.setDate(today.getDate() - i);
-            const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-            const isLogged = logs.some(l => String(l.streak_id) === String(streakId) && normalizeDate(l.date) === dStr);
+            const dStr = toLocalDateString(d);
+            const isLogged = logs.some(l => String(l.streak_id) === String(streakId) && toLocalDateString(l.date) === dStr);
             days.push({ date: dStr, isLogged });
         }
 
