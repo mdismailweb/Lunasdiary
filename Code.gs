@@ -216,6 +216,8 @@ function doPost(e) {
       case 'getSavedTwitchVideos': result = getSavedTwitchVideos();         break;
       case 'saveTwitchVideo':      result = saveTwitchVideo(params);        break;
       case 'saveTwitchDismissed':  result = saveTwitchDismissed(params);    break;
+      case 'removeSavedTwitchVideo': result = removeSavedTwitchVideo(params); break;
+      case 'saveYouTubeVideo':     result = saveYouTubeVideo(params);       break;
 
       default:
         result = { error: 'Unknown action: ' + action };
@@ -2105,3 +2107,12 @@ function saveFaceGroups(params) {
   return { success: true, count: groups.length };
 }
 
+function removeSavedTwitchVideo(params) {
+  if (!_sheet(S.SAVED_TWITCH_VIDEOS)) return { success: true };
+  // We use video_id as the primary key for saved videos
+  var row = _findRow(S.SAVED_TWITCH_VIDEOS, 'video_id', params.video_id);
+  if (row > 0) {
+    _ss().getSheetByName(S.SAVED_TWITCH_VIDEOS).deleteRow(row);
+  }
+  return { success: true };
+}

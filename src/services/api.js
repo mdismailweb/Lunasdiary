@@ -170,6 +170,7 @@ export const getTwitchData = (params) => _call('getTwitchData', params);
 export const searchTwitchChannel = (query) => _call('searchTwitchChannel', { query });
 export const getSavedTwitchVideos = () => _call('getSavedTwitchVideos');
 export const saveTwitchVideo = (params) => _call('saveTwitchVideo', params);
+export const removeSavedTwitchVideo = (video_id) => _call('removeSavedTwitchVideo', { video_id });
 export const saveTwitchDismissed = (item_id) => _call('saveTwitchDismissed', { item_id });
 
 

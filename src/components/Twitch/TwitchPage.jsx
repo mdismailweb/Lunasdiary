@@ -68,17 +68,28 @@ function TwitchVideoCard({ item, type, onPlay, onSave, onDismiss }) {
                 </div>
             </div>
 
-            {(isPending || isLive) && onSave && (
+            {(isPending || isLive || isSaved) && (onSave || onDismiss || (isSaved && onSave)) && (
                 <div className="yt-pending-actions">
-                    <button
-                        className="yt-approve-btn"
-                        onClick={(e) => { e.stopPropagation(); onSave(item, isLive); }}
-                        title={isLive ? "Bookmark Stream" : "Add to Library"}
-                        style={{ background: isLive ? 'rgba(169, 112, 255, 0.2)' : undefined, color: isLive ? '#a970ff' : undefined }}
-                    >
-                        ＋
-                    </button>
-                    {onDismiss && (
+                    {onSave && !isSaved && (
+                        <button
+                            className="yt-approve-btn"
+                            onClick={(e) => { e.stopPropagation(); onSave(item, isLive); }}
+                            title={isLive ? "Bookmark Stream" : "Add to Library"}
+                            style={{ background: isLive ? 'rgba(169, 112, 255, 0.2)' : undefined, color: isLive ? '#a970ff' : undefined }}
+                        >
+                            ＋
+                        </button>
+                    )}
+                    {isSaved && onSave && (
+                        <button
+                            className="yt-dismiss-btn"
+                            onClick={(e) => { e.stopPropagation(); onSave(item); }}
+                            title="Remove from Library"
+                        >
+                            ✕
+                        </button>
+                    )}
+                    {onDismiss && !isSaved && (
                         <button className="yt-dismiss-btn" onClick={(e) => { e.stopPropagation(); onDismiss(item.id || item.video_id); }} title="Dismiss">
                             ✕
                         </button>
@@ -203,6 +214,16 @@ export default function TwitchPage() {
         }
     };
 
+    const handleRemoveSaved = async (item) => {
+        if (!window.confirm('Remove from library?')) return;
+        try {
+            await api.removeSavedTwitchVideo(item.video_id || item.id);
+            setLibrary(prev => prev.filter(v => (v.video_id || v.id) !== (item.video_id || item.id)));
+        } catch (err) {
+            console.error('Remove video error:', err);
+        }
+    };
+
     const handleDismiss = async (itemId) => {
         try {
             await api.saveTwitchDismissed(itemId);
@@ -213,12 +234,13 @@ export default function TwitchPage() {
     };
 
     // Filter Logic
-    const filteredStreams = selected ? streams.filter(s => s.user_id === selected) : streams;
-    const filteredLibrary = selected ? library.filter(v => v.user_id === selected) : library;
+    // Filter Logic - Using String() to avoid ID type mismatches (String vs Number)
+    const filteredStreams = selected ? streams.filter(s => String(s.user_id) === String(selected)) : streams;
+    const filteredLibrary = selected ? library.filter(v => String(v.user_id) === String(selected)) : library;
     const pendingVideos = videos.filter(v =>
-        !library.some(l => l.video_id === v.id) &&
+        !library.some(l => (l.video_id || l.id) === v.id) &&
         !dismissed.has(v.id) &&
-        (!selected || v.user_id === selected)
+        (!selected || String(v.user_id) === String(selected))
     );
 
     return (
@@ -320,15 +342,16 @@ export default function TwitchPage() {
 
                         {/* 3. Saved Library */}
                         {filteredLibrary.length > 0 && (
-                            <div style={{ marginTop: '2.5rem' }}>
-                                <div className="yt-approved-header">✅ Saved Library</div>
+                            <div className="yt-section">
+                                <h3 className="yt-section-title">📚 Saved Library</h3>
                                 <div className="yt-video-grid">
-                                    {filteredLibrary.map(v => (
+                                    {filteredLibrary.map(item => (
                                         <TwitchVideoCard
-                                            key={v.video_id}
-                                            item={v}
+                                            key={item.video_id || item.id}
+                                            item={item}
                                             type="library"
-                                            onPlay={(ch, vid) => setActivePlayer({ channel: ch, videoId: vid })}
+                                            onPlay={handlePlay}
+                                            onSave={handleRemoveSaved}
                                         />
                                     ))}
                                 </div>
