@@ -323,6 +323,121 @@ video.lightbox-img {
   cursor: pointer;
   z-index: 10;
 }
+/* ── Common Layout Stacking ────────────────────────── */
+@media (max-width: 768px) {
+  .two-col, .stats-row, .media-row, .videos-layout, .journal-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1.25rem !important;
+  }
+
+  .masonry-grid {
+    columns: 1 !important;
+    display: block !important;
+  }
+
+  /* ── Dashboard Stacking ───────────────────────────── */
+  .stat-card {
+    padding: 1rem !important;
+  }
+
+  /* ── Videos & Twitch ──────────────────────────────── */
+  .videos-sidebar {
+    width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(167, 139, 250, 0.1);
+    padding-bottom: 1.25rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .yt-add-row {
+    flex-direction: row !important; /* Keep input and button on one line */
+    gap: 8px !important;
+  }
+
+  /* Horizontal Pill pattern for Video Channels */
+  .yt-channel-list {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    padding: 0.25rem 0 0.75rem !important;
+    gap: 10px !important;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .yt-channel-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .yt-channel-card {
+    min-width: 140px !important;
+    flex: 0 0 auto !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    padding: 12px 10px !important;
+    border-radius: 12px !important;
+    background: rgba(255,255,255,0.03) !important;
+  }
+
+  .yt-ch-avatar {
+    width: 48px !important;
+    height: 48px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .yt-ch-info {
+    width: 100% !important;
+  }
+
+  .yt-ch-name {
+    font-size: 0.75rem !important;
+    margin-bottom: 2px !important;
+  }
+
+  .yt-video-grid, .yt-pending-grid {
+    grid-template-columns: 1fr !important; /* Large beautiful thumbnails */
+    gap: 1.5rem !important;
+  }
+
+  .yt-video-card, .yt-pending-card {
+    background: rgba(255,255,255,0.02) !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(255,255,255,0.04) !important;
+  }
+
+  /* ── Journal List ─────────────────────────────────── */
+  .journal-list {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 40vh !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border);
+    overflow-y: auto !important;
+  }
+
+  .journal-editor {
+    width: 100% !important;
+    padding: 1.25rem 0.75rem !important;
+  }
+
+  .editor-topbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1rem !important;
+  }
+
+  .editor-topbar > div {
+    width: 100% !important;
+  }
+
+  .journal-textarea {
+    font-size: 1.05rem !important; /* Better for readability/touch */
+    min-height: 300px !important;
+  }
+}
 /* ── Vault Responsive Layout ──────────────────────────────── */
 @media (max-width: 768px) {
   .vault-layout {

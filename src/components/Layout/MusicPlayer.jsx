@@ -59,15 +59,30 @@ export default function MusicPlayer() {
             videoId,
             playerVars: {
                 autoplay: 1, controls: 0, loop: 1,
-                playlist: videoId, rel: 0, modestbranding: 1, playsinline: 1
+                playlist: videoId, rel: 0, modestbranding: 1,
+                playsinline: 1,
+                mute: 1 // ← muted autoplay is ALWAYS allowed by browsers
             },
             events: {
                 onReady: (e) => {
-                    e.target.setVolume(muted ? 0 : Math.round(volume * 100));
-                    // Do NOT setPlaying(true) here — playVideo() can be blocked by autoplay policy.
-                    // onStateChange will fire with PLAYING only when audio is actually running.
+                    // Start muted (browser always allows muted autoplay) then unmute on first interaction
+                    e.target.mute();
+                    e.target.setVolume(0);
                     e.target.playVideo();
+                    // setPlaying driven by onStateChange only
                     
+                    // Unmute as soon as user taps anywhere
+                    const unmute = () => {
+                        try {
+                            e.target.unMute();
+                            e.target.setVolume(muted ? 0 : Math.round(volume * 100));
+                        } catch (_) { }
+                        document.removeEventListener('click', unmute);
+                        document.removeEventListener('touchstart', unmute);
+                    };
+                    document.addEventListener('click', unmute);
+                    document.addEventListener('touchstart', unmute, { passive: true });
+
                     // Grab the video title for the bottom bar
                     try {
                         const title = e.target.getVideoData()?.title;
@@ -85,10 +100,9 @@ export default function MusicPlayer() {
                     } catch (_) { }
                 },
                 onStateChange: (e) => {
-                    // This is the only reliable source of truth for playback state.
                     if (e.data === window.YT.PlayerState.PLAYING) setPlaying(true);
-                    if (e.data === window.YT.PlayerState.PAUSED || e.data === window.YT.PlayerState.BUFFERING) setPlaying(false);
-                    if (e.data === -1) setPlaying(false); // UNSTARTED (autoplay blocked)
+                    if (e.data === window.YT.PlayerState.PAUSED) setPlaying(false);
+                    if (e.data === -1) setPlaying(false); // UNSTARTED
                 }
             },
         });
@@ -119,27 +133,23 @@ export default function MusicPlayer() {
         audio.volume = volume;
         registerMusic(audio);
 
-        const tryAutoplay = async () => {
-            // Attach interaction trap to resume media context on user's first tap/click.
-            // This bypasses strict autoplay blocks on both desktop and mobile safely.
-            const onFirstInteraction = () => {
-                if (audio.paused && !playing) {
-                    audio.play().catch(() => {});
-                }
-                if (ytPlayer.current && !playing) {
-                    ytPlayer.current.playVideo();
-                }
-                document.removeEventListener('click', onFirstInteraction);
-                document.removeEventListener('touchstart', onFirstInteraction);
-            };
-            document.addEventListener('click', onFirstInteraction);
-            document.addEventListener('touchstart', onFirstInteraction, { passive: true });
-
+        const tryAutoplay = () => {
             if (STATIONS[0].id === 'ambience') {
+                // YT player starts muted and unmutes on first tap (handled in onReady)
                 createYTPlayer(pickRandom());
             } else {
+                // For html5 audio, start muted and unmute on first interaction
                 audio.src = STATIONS[0].url;
+                audio.muted = true;
                 audio.play().catch(() => { });
+                const onFirstInteraction = () => {
+                    audio.muted = false;
+                    audio.volume = volume;
+                    document.removeEventListener('click', onFirstInteraction);
+                    document.removeEventListener('touchstart', onFirstInteraction);
+                };
+                document.addEventListener('click', onFirstInteraction);
+                document.addEventListener('touchstart', onFirstInteraction, { passive: true });
             }
         };
 
@@ -267,7 +277,7 @@ export default function MusicPlayer() {
             if (!a) return;
             a.src = st.url;
             a.play().catch(() => { });
-            
+
             if ('mediaSession' in navigator) {
                 navigator.mediaSession.metadata = new window.MediaMetadata({
                     title: st.desc,
