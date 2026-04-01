@@ -118,8 +118,13 @@ export default function Lightbox({ images, startIndex = 0, onClose }) {
         dragStart.current = null;
     };
 
-    // Reset zoom when navigating
-    useEffect(() => { resetZoom(); }, [idx]);
+    // ── Attach non-passive touchmove so preventDefault() works ──
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        el.addEventListener('touchmove', onTouchMove, { passive: false });
+        return () => el.removeEventListener('touchmove', onTouchMove);
+    });
 
     if (!images || images.length === 0) return null;
     const currentItem = images[idx];
@@ -130,7 +135,6 @@ export default function Lightbox({ images, startIndex = 0, onClose }) {
             onClick={scale === 1 ? onClose : undefined}
             ref={containerRef}
             onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
         >
             {/* Top Bar */}
