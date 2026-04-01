@@ -64,8 +64,9 @@ export default function MusicPlayer() {
             events: {
                 onReady: (e) => {
                     e.target.setVolume(muted ? 0 : Math.round(volume * 100));
+                    // Do NOT setPlaying(true) here — playVideo() can be blocked by autoplay policy.
+                    // onStateChange will fire with PLAYING only when audio is actually running.
                     e.target.playVideo();
-                    setPlaying(true);
                     
                     // Grab the video title for the bottom bar
                     try {
@@ -84,8 +85,10 @@ export default function MusicPlayer() {
                     } catch (_) { }
                 },
                 onStateChange: (e) => {
+                    // This is the only reliable source of truth for playback state.
                     if (e.data === window.YT.PlayerState.PLAYING) setPlaying(true);
-                    if (e.data === window.YT.PlayerState.PAUSED) setPlaying(false);
+                    if (e.data === window.YT.PlayerState.PAUSED || e.data === window.YT.PlayerState.BUFFERING) setPlaying(false);
+                    if (e.data === -1) setPlaying(false); // UNSTARTED (autoplay blocked)
                 }
             },
         });
