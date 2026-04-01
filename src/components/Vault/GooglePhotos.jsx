@@ -16,6 +16,10 @@ function VaultLightbox({ items, index, onClose, likedIds, onLike }) {
     const [dragging, setDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
+    // For pinch-to-zoom touch
+    const lastTouchDist = React.useRef(null);
+    const lastTap = React.useRef(0);
+
     useEffect(() => { setCurrent(index); setScale(1); setTranslate({ x: 0, y: 0 }); }, [index]);
 
     const navigate = (dir) => {
@@ -38,10 +42,49 @@ function VaultLightbox({ items, index, onClose, likedIds, onLike }) {
         setScale(s => Math.min(4, Math.max(0.5, s + (e.deltaY > 0 ? -0.15 : 0.15))));
     };
     const handleMouseDown = (e) => {
-        if (e.button === 2) { e.preventDefault(); setDragging(true); setDragStart({ x: e.clientX - translate.x, y: e.clientY - translate.y }); }
+        if (e.button === 2 || e.button === 0) { e.preventDefault(); setDragging(true); setDragStart({ x: e.clientX - translate.x, y: e.clientY - translate.y }); }
     };
     const handleMouseMove = (e) => { if (dragging) setTranslate({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y }); };
     const handleMouseUp = () => setDragging(false);
+
+    // Touch handlers for mobile
+    const onTouchStart = (e) => {
+        if (e.touches.length === 2) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            lastTouchDist.current = Math.sqrt(dx * dx + dy * dy);
+        } else if (e.touches.length === 1) {
+            const now = Date.now();
+            if (now - lastTap.current < 300) {
+                setScale(s => s > 1 ? 1 : 2.5);
+                setTranslate({x: 0, y: 0});
+            }
+            lastTap.current = now;
+            setDragging(true);
+            setDragStart({ x: e.touches[0].clientX - translate.x, y: e.touches[0].clientY - translate.y });
+        }
+    };
+    const onTouchMove = (e) => {
+        if (e.touches.length === 2) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (lastTouchDist.current) {
+                setScale(s => Math.min(Math.max(s * (dist / lastTouchDist.current), 1), 5));
+            }
+            lastTouchDist.current = dist;
+        } else if (e.touches.length === 1 && dragging && scale > 1) {
+            setTranslate({ x: e.touches[0].clientX - dragStart.x, y: e.touches[0].clientY - dragStart.y });
+        }
+    };
+    const onTouchEnd = (e) => {
+        if (e.touches.length < 2) lastTouchDist.current = null;
+        if (scale <= 1 && e.changedTouches.length === 1 && dragging) {
+            const dx = e.changedTouches[0].clientX - (dragStart.x + translate.x);
+            if (Math.abs(dx) > 60) navigate(dx < 0 ? 1 : -1);
+        }
+        setDragging(false);
+    };
 
     if (index < 0 || !items[current]) return null;
     const item = items[current];
@@ -49,47 +92,67 @@ function VaultLightbox({ items, index, onClose, likedIds, onLike }) {
     const isLiked = likedIds?.has(item.id);
 
     return ReactDOM.createPortal(
-        <div onClick={onClose} style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.96)',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            backdropFilter: 'blur(8px)', paddingBottom: '90px', boxSizing: 'border-box', zIndex: 99999,
-        }}>
+        <div onClick={scale === 1 ? onClose : undefined} className="vault-lightbox-container">
+            <style>{`
+                .vault-lightbox-container {
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                    width: 100vw; height: 100vh; background: rgba(0,0,0,0.96);
+                    display: flex; flex-direction: column; align-items: center; justify-content: center;
+                    backdrop-filter: blur(8px); padding-bottom: 90px; box-sizing: border-box; z-index: 99999;
+                    touch-action: none; overflow: hidden;
+                }
+                .vault-lightbox-media {
+                    width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+                    padding: 60px 80px; box-sizing: border-box; overflow: hidden; user-select: none;
+                }
+                .vault-lightbox-img {
+                    max-width: 100%; max-height: 100%; border-radius: 12px; object-fit: contain;
+                    box-shadow: 0 30px 60px rgba(0,0,0,0.6); transform-origin: center center;
+                }
+                @media (max-width: 768px) {
+                    .vault-lightbox-container { padding-bottom: 70px; }
+                    .vault-lightbox-media { padding: 40px 0; }
+                    .vault-lightbox-img { border-radius: 0; width: 100vw; max-width: 100vw; height: auto; max-height: 100vh; }
+                    .vl-nav-btn { display: none !important; } /* Hide side arrows on mobile to save space */
+                }
+            `}</style>
+
             {/* Top-right controls */}
-            {/* Like button */}
             {onLike && (
                 <button onClick={(e) => { e.stopPropagation(); onLike(item); }}
                     style={{ position: 'absolute', top: '1rem', right: '4.5rem', background: isLiked ? 'rgba(239,68,68,0.3)' : 'rgba(0,0,0,0.55)', border: isLiked ? '1px solid rgba(239,68,68,0.6)' : '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', width: '40px', height: '40px', fontSize: '1.2rem', cursor: 'pointer', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
                     {isLiked ? '❤️' : '🤍'}
                 </button>
             )}
-            {/* Close button */}
             <button onClick={onClose} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', borderRadius: '50%', width: '40px', height: '40px', fontSize: '1.2rem', cursor: 'pointer', zIndex: 10 }}>✕</button>
 
             {/* Title */}
             {item.title && (
-                <div style={{ position: 'absolute', top: '1rem', left: '50%', transform: 'translateX(-50%)', color: 'rgba(255,255,255,0.85)', fontSize: '0.85rem', background: 'rgba(0,0,0,0.5)', padding: '4px 14px', borderRadius: '20px', maxWidth: '60vw', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ position: 'absolute', top: '1rem', left: '50%', transform: 'translateX(-50%)', color: 'rgba(255,255,255,0.85)', fontSize: '0.85rem', background: 'rgba(0,0,0,0.5)', padding: '4px 14px', borderRadius: '20px', maxWidth: '60vw', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', zIndex: 10 }}>
                     {item.title}
                 </div>
             )}
 
             {/* Prev */}
-            {items.length > 1 && <button onClick={(e) => { e.stopPropagation(); navigate(-1); }} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', borderRadius: '50%', width: '48px', height: '48px', fontSize: '1.5rem', cursor: 'pointer', zIndex: 10 }}>‹</button>}
+            {items.length > 1 && <button className="vl-nav-btn" onClick={(e) => { e.stopPropagation(); navigate(-1); }} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', borderRadius: '50%', width: '48px', height: '48px', fontSize: '1.5rem', cursor: 'pointer', zIndex: 10 }}>‹</button>}
 
             {/* Media */}
-            <div onClick={e => e.stopPropagation()}
+            <div className="vault-lightbox-media"
+                onClick={e => e.stopPropagation()}
                 onWheel={isVideo ? undefined : handleWheel}
                 onMouseDown={isVideo ? undefined : handleMouseDown}
                 onMouseMove={isVideo ? undefined : handleMouseMove}
                 onMouseUp={isVideo ? undefined : handleMouseUp}
                 onMouseLeave={isVideo ? undefined : handleMouseUp}
+                onTouchStart={isVideo ? undefined : onTouchStart}
+                onTouchMove={isVideo ? undefined : onTouchMove}
+                onTouchEnd={isVideo ? undefined : onTouchEnd}
                 onContextMenu={e => e.preventDefault()}
-                style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px 80px', boxSizing: 'border-box', overflow: 'hidden', userSelect: 'none', cursor: isVideo ? 'default' : (dragging ? 'grabbing' : (scale > 1 ? 'zoom-out' : 'zoom-in')) }}>
+                style={{ cursor: isVideo ? 'default' : (dragging ? 'grabbing' : (scale > 1 ? 'zoom-out' : 'zoom-in')) }}>
+                
                 {isVideo ? (
-                    // Google Drive videos embed via iframe — file must be shared "Anyone with link"
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-                        <div style={{ position: 'relative', width: 'min(80vw, 960px)', height: 'min(65vh, 540px)' }}>
-                            {/* Loading overlay */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%' }}>
+                        <div style={{ position: 'relative', width: 'min(90vw, 960px)', height: 'min(70vh, 540px)' }}>
                             <div id={`vid-loading-${item.id}`} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', borderRadius: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', zIndex: 1 }}>
                                 <div style={{ width: '36px', height: '36px', border: '3px solid rgba(255,255,255,0.2)', borderTop: '3px solid white', borderRadius: '50%', animation: 'spin 0.9s linear infinite' }} />
                                 <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' }}>Loading video…</span>
@@ -106,21 +169,13 @@ function VaultLightbox({ items, index, onClose, likedIds, onLike }) {
                                 }}
                             />
                         </div>
-                        {/* Fallback button if iframe is blocked */}
-                        <a
-                            href={`https://drive.google.com/file/d/${item.id}/view`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={e => e.stopPropagation()}
-                            style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.78rem', textDecoration: 'none', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '20px', padding: '5px 14px', transition: 'all 0.2s' }}
-                        >
+                        <a href={`https://drive.google.com/file/d/${item.id}/view`} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.78rem', textDecoration: 'none', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '20px', padding: '5px 14px', transition: 'all 0.2s', zIndex: 10 }}>
                             ↗ Open in Google Drive
                         </a>
-                        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
                     </div>
                 ) : (
-                    <img src={item.largeSrc} alt={item.title} referrerPolicy="no-referrer" draggable={false}
-                        style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: '12px', objectFit: 'contain', boxShadow: '0 30px 60px rgba(0,0,0,0.6)', transform: `scale(${scale}) translate(${translate.x / scale}px, ${translate.y / scale}px)`, transition: dragging ? 'none' : 'transform 0.15s ease', transformOrigin: 'center center' }}
+                    <img className="vault-lightbox-img" src={item.largeSrc} alt={item.title} referrerPolicy="no-referrer" draggable={false}
+                        style={{ transform: `scale(${scale}) translate(${translate.x / scale}px, ${translate.y / scale}px)`, transition: dragging ? 'none' : 'transform 0.15s ease' }}
                         onDoubleClick={() => { setScale(1); setTranslate({ x: 0, y: 0 }); }}
                         onError={(e) => { if (e.target.src !== item.src) e.target.src = item.src; }}
                     />
@@ -128,14 +183,14 @@ function VaultLightbox({ items, index, onClose, likedIds, onLike }) {
             </div>
 
             {/* Next */}
-            {items.length > 1 && <button onClick={(e) => { e.stopPropagation(); navigate(1); }} style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', borderRadius: '50%', width: '48px', height: '48px', fontSize: '1.5rem', cursor: 'pointer', zIndex: 10 }}>›</button>}
+            {items.length > 1 && <button className="vl-nav-btn" onClick={(e) => { e.stopPropagation(); navigate(1); }} style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', borderRadius: '50%', width: '48px', height: '48px', fontSize: '1.5rem', cursor: 'pointer', zIndex: 10 }}>›</button>}
 
             {/* Filmstrip */}
             {items.length > 1 && (
-                <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', bottom: '1rem', display: 'flex', gap: '6px', overflowX: 'auto', maxWidth: '90vw', padding: '0.5rem' }}>
+                <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', bottom: '1rem', display: 'flex', gap: '6px', overflowX: 'auto', maxWidth: '95vw', padding: '0.5rem', zIndex: 10, scrollbarWidth: 'none' }}>
                     {items.map((it, i) => (
                         <img key={i} src={it.src} alt={it.title} referrerPolicy="no-referrer" onClick={() => navigate(i - current)}
-                            style={{ width: '64px', height: '48px', objectFit: 'cover', borderRadius: '6px', cursor: 'pointer', border: i === current ? '2px solid white' : '2px solid transparent', opacity: i === current ? 1 : 0.6, transition: 'all 0.2s', flexShrink: 0 }} />
+                            style={{ width: '64px', height: '48px', objectFit: 'cover', borderRadius: '6px', cursor: 'pointer', border: i === current ? '2px solid var(--accent)' : '2px solid transparent', opacity: i === current ? 1 : 0.6, transition: 'all 0.2s', flexShrink: 0 }} />
                     ))}
                 </div>
             )}
@@ -145,6 +200,7 @@ function VaultLightbox({ items, index, onClose, likedIds, onLike }) {
 }
 
 // ─── MediaGrid ───────────────────────────────────────────────
+
 function MediaGrid({ items, likedIds, onLike, onOpen }) {
     return (
         <div style={{
