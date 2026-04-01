@@ -44,3 +44,42 @@
 .sidebar {
   padding-top: 0.5rem !important;
 }
+
+/* -- Mobile Pill Position ----------------------------------- */
+@media (max-width: 768px) {
+  .preload-pill-mobile {
+    position: fixed;
+    bottom: 90px; /* Above BottomNav */
+    right: 1.25rem;
+    left: 1.25rem;
+    background: rgba(26, 26, 46, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(167, 139, 250, 0.3);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+    z-index: 999;
+    animation: fade-in-up 0.5s ease;
+  }
+
+  .preload-pill-mobile .spinner-mini {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(167, 139, 250, 0.3);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  .preload-pill-mobile .pill-text {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--accent);
+    font-family: var(--font-mono);
+  }
+}
+
+.preload-pill-mobile { display: none; }

@@ -6,6 +6,7 @@ import { ToastProvider } from './context/ToastContext.jsx'
 import './styles/global.css'
 import './styles/animations.css'
 import './styles/preloader.css'
+import './styles/mobile.css'
 
 
 // ── Service Worker Registration ────────────────────────────────

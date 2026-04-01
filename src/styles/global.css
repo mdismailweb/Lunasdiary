@@ -2512,3 +2512,116 @@ textarea.field-input {
     opacity: 1;
     transform: scale(1.2);
 }
+
+/* -- Mobile Navigation & Header --------------------------- */
+@media (max-width: 768px) {
+  .mobile-header {
+    display: flex !important;
+    height: 60px;
+    padding: 0 1.25rem;
+    background: rgba(26, 26, 46, 0.82);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 500;
+    animation: fade-in 0.3s ease;
+  }
+
+  .mobile-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .mobile-logo h1 {
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    font-weight: 800;
+    color: var(--accent);
+    margin: 0;
+  }
+
+  .mobile-sync-btn {
+    background: var(--accent-dim);
+    color: var(--accent);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    border: 1px solid rgba(232, 160, 69, 0.2);
+  }
+
+  .bottom-nav {
+    display: grid !important;
+    position: fixed;
+    bottom: 0px;
+    left: 0;
+    right: 0;
+    height: 75px;
+    background: rgba(22, 33, 62, 0.88);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border-top: 1px solid var(--accent-dim);
+    grid-template-columns: repeat(4, 1fr);
+    padding: 0 10px;
+    padding-bottom: constant(safe-area-inset-bottom);
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 1000;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+  }
+
+  .bottom-nav .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  .bottom-nav .nav-item.active {
+    color: var(--accent);
+    transform: translateY(-4px) scale(1.1);
+  }
+
+  .bottom-nav .nav-icon {
+    font-size: 1.5rem;
+  }
+
+  .bottom-nav .nav-label {
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .app-shell {
+    padding-top: 60px;
+    height: 100vh;
+  }
+
+  .sidebar {
+    display: none !important;
+  }
+
+  .content-area {
+    padding: 1.25rem 1rem !important;
+    padding-bottom: 100px !important;
+  }
+}
+
+.mobile-header { display: none; }
+.bottom-nav { display: none; }

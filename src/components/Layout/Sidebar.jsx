@@ -22,9 +22,14 @@ const TABS = [
     { id: 'delegation', icon: '📥', label: 'Delegation' },
 ];
 
-export default function Sidebar({ active, onNavigate, userName, isOffline, onPreload, isPreloading }) {
+export default function Sidebar({ active, onNavigate, userName, isOffline, onPreload, isPreloading, isOpen, onClose }) {
     return (
-        <aside className="sidebar">
+        <>
+            {/* Mobile Drawer Overlay */}
+            {isOpen && <div className="sidebar-overlay" onClick={onClose} />}
+
+            <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+
             <button 
                 className={`sync-btn ${isPreloading ? 'syncing' : ''}`}
                 onClick={onPreload}
@@ -69,5 +74,6 @@ export default function Sidebar({ active, onNavigate, userName, isOffline, onPre
                 <button className="settings-btn" title="Settings">⚙️</button>
             </div>
         </aside>
+        </>
     );
 }

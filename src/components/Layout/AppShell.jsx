@@ -1,16 +1,26 @@
 import { useState } from 'react';
 import Sidebar from './Sidebar';
 import MusicPlayer from './MusicPlayer';
+import MobileHeader from './MobileHeader';
+import MobileNav from './MobileNav';
 
 export default function AppShell({ activeTab, onNavigate, userName, isOffline, preload, onPreload, children }) {
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const progress = preload?.total > 0 ? (preload.current / preload.total) * 100 : 0;
+
+    const handleMobileNavigate = (tab) => {
+        onNavigate(tab);
+        setIsMenuOpen(false);
+    };
 
     return (
         <>
+            <MobileHeader userName={userName} isOffline={isOffline} />
+            
             {/* ── Floating Preloader Pill ── */}
             {preload?.active && (
                 <div style={{
-                    position: 'fixed', bottom: '2rem', right: '2rem',
+                    position: 'fixed', bottom: '5.5rem', right: '1.25rem', // Adjusted for mobile nav
                     background: 'var(--surface, #1a1a2e)',
                     border: '1px solid rgba(167, 139, 250, 0.4)',
                     borderRadius: '100px',
@@ -31,7 +41,7 @@ export default function AppShell({ activeTab, onNavigate, userName, isOffline, p
                         </span>
                     </div>
 
-                    <div style={{ width: '80px', height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '10px', overflow: 'hidden' }}>
+                    <div style={{ width: '50px', height: '4px', background: 'rgba(255,255,255,0.08)', borderRadius: '10px', overflow: 'hidden' }}>
                         <div style={{ 
                             width: `${progress}%`, height: '100%', 
                             background: 'var(--accent)', 
@@ -42,21 +52,31 @@ export default function AppShell({ activeTab, onNavigate, userName, isOffline, p
                 </div>
             )}
 
-            <div className={`app-shell ${isOffline ? 'is-offline' : ''}`}>
+            <div className={`app-shell ${isOffline ? 'is-offline' : ''} ${isMenuOpen ? 'menu-open' : ''}`}>
                 <Sidebar 
                     active={activeTab} 
-                    onNavigate={onNavigate} 
+                    onNavigate={handleMobileNavigate} 
                     userName={userName} 
                     isOffline={isOffline} 
                     onPreload={onPreload}
                     isPreloading={preload?.active}
+                    isOpen={isMenuOpen}
+                    onClose={() => setIsMenuOpen(false)}
                 />
 
                 <main className="content-area tab-enter" key={activeTab}>
                     {children}
                 </main>
             </div>
+
+            <MobileNav 
+                active={activeTab} 
+                onNavigate={onNavigate} 
+                onToggleMenu={() => setIsMenuOpen(!isMenuOpen)} 
+            />
+
             <MusicPlayer />
         </>
     );
 }
+
