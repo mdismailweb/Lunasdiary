@@ -117,21 +117,25 @@ function VaultLightbox({ items, index, onClose, likedIds, onLike }) {
                 }
             `}</style>
 
-            {/* Top-right controls */}
-            {onLike && (
-                <button onClick={(e) => { e.stopPropagation(); onLike(item); }}
-                    style={{ position: 'absolute', top: '1rem', right: '4.5rem', background: isLiked ? 'rgba(239,68,68,0.3)' : 'rgba(0,0,0,0.55)', border: isLiked ? '1px solid rgba(239,68,68,0.6)' : '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', width: '40px', height: '40px', fontSize: '1.2rem', cursor: 'pointer', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
-                    {isLiked ? '❤️' : '🤍'}
-                </button>
-            )}
-            <button onClick={onClose} style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', borderRadius: '50%', width: '40px', height: '40px', fontSize: '1.2rem', cursor: 'pointer', zIndex: 10 }}>✕</button>
-
-            {/* Title */}
-            {item.title && (
-                <div style={{ position: 'absolute', top: '1rem', left: '50%', transform: 'translateX(-50%)', color: 'rgba(255,255,255,0.85)', fontSize: '0.85rem', background: 'rgba(0,0,0,0.5)', padding: '4px 14px', borderRadius: '20px', maxWidth: '60vw', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', zIndex: 10 }}>
-                    {item.title}
+            {/* Top Bar for filename and controls */}
+            <div className="vl-topbar" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1rem', background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)', zIndex: 20 }}>
+                {item.title && (
+                    <div className="vl-title" style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.9rem', fontWeight: 600, maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', background: 'rgba(0,0,0,0.3)', padding: '4px 12px', borderRadius: '20px' }}>
+                        {item.title}
+                    </div>
+                )}
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                    {onLike && (
+                        <button onClick={(e) => { e.stopPropagation(); onLike(item); }}
+                            style={{ background: isLiked ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.15)', border: isLiked ? '1px solid rgba(239,68,68,0.6)' : '1px solid rgba(255,255,255,0.2)', borderRadius: '50%', width: '40px', height: '40px', fontSize: '1.2rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', backdropFilter: 'blur(8px)' }}>
+                            {isLiked ? '❤️' : '🤍'}
+                        </button>
+                    )}
+                    <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: '50%', width: '40px', height: '40px', fontSize: '1.2rem', cursor: 'pointer', backdropFilter: 'blur(8px)' }}>✕</button>
                 </div>
-            )}
+            </div>
+
 
             {/* Prev */}
             {items.length > 1 && <button className="vl-nav-btn" onClick={(e) => { e.stopPropagation(); navigate(-1); }} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', borderRadius: '50%', width: '48px', height: '48px', fontSize: '1.5rem', cursor: 'pointer', zIndex: 10 }}>‹</button>}

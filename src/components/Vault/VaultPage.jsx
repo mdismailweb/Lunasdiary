@@ -113,63 +113,66 @@ function VaultPage() {
     };
 
     return (
-        <div className="fade-in" style={{ display: 'flex', gap: '1.5rem', height: '100%' }}>
-            {/* ─── Left Sidebar ─── */}
-            <div style={{ width: '200px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.75rem' }}>🔒 Vault</h2>
+        <div className="vault-layout">
+            {/* ─── Left Sidebar / Top Nav ─── */}
+            <div className="vault-sidebar">
+                <h2 className="vault-title">🔒 Vault</h2>
 
-                {/* Liked — always first */}
-                <NavBtn
-                    active={activeTab === 'liked'}
-                    onClick={() => setActiveTab('liked')}
-                    icon="❤️"
-                    label="Liked"
-                />
+                <div className="vault-nav-scroll">
+                    {/* Liked — always first */}
+                    <NavBtn
+                        active={activeTab === 'liked'}
+                        onClick={() => setActiveTab('liked')}
+                        icon="❤️"
+                        label="Liked"
+                    />
 
-                <NavBtn
-                    active={activeTab === 'people'}
-                    onClick={() => setActiveTab('people')}
-                    icon="👥"
-                    label="People"
-                />
+                    <NavBtn
+                        active={activeTab === 'people'}
+                        onClick={() => setActiveTab('people')}
+                        icon="👥"
+                        label="People"
+                    />
 
 
-                {/* Divider */}
-                {folders.length > 0 && (
-                    <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', padding: '0.5rem 0.9rem 0.2rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                        Folders
-                    </div>
-                )}
+                    {/* Divider */}
+                    {folders.length > 0 && (
+                        <div className="vault-divider" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', padding: '0.5rem 0.9rem 0.2rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            Folders
+                        </div>
+                    )}
 
-                {/* Folder list */}
-                {loadingFolders ? (
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', padding: '0 0.9rem' }}>Loading…</div>
-                ) : (
-                    folders.map(folder => (
-                        <NavBtn
-                            key={folder.id}
-                            active={activeTab === folder.id}
-                            onClick={() => setActiveTab(folder.id)}
-                            icon="📁"
-                            label={folder.name}
-                            onRemove={() => handleRemoveFolder(folder.id)}
-                        />
-                    ))
-                )}
+                    {/* Folder list */}
+                    {loadingFolders ? (
+                        <div className="vault-loading">Loading…</div>
+                    ) : (
+                        folders.map(folder => (
+                            <NavBtn
+                                key={folder.id}
+                                active={activeTab === folder.id}
+                                onClick={() => setActiveTab(folder.id)}
+                                icon="📁"
+                                label={folder.name}
+                                onRemove={() => handleRemoveFolder(folder.id)}
+                            />
+                        ))
+                    )}
 
-                {/* Add folder — bottom of sidebar */}
-                <button
-                    onClick={() => setShowAdd(true)}
-                    style={{ marginTop: '0.5rem', width: '100%', padding: '0.55rem 0.9rem', borderRadius: '10px', border: '1px dashed rgba(255,255,255,0.18)', background: 'transparent', color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}
-                    onMouseEnter={e => { e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.4)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'; }}
-                >
-                    + Add Folder
-                </button>
+                    {/* Add folder — bottom of sidebar */}
+                    <button
+                        className="vault-add-btn"
+                        onClick={() => setShowAdd(true)}
+                        style={{ marginTop: '0.5rem', width: '100%', padding: '0.55rem 0.9rem', borderRadius: '10px', border: '1px dashed rgba(255,255,255,0.18)', background: 'transparent', color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}
+                        onMouseEnter={e => { e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.4)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'; }}
+                    >
+                        + Add Folder
+                    </button>
+                </div>
             </div>
 
             {/* ─── Content Area ─── */}
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="vault-content">
                 {activeTab === 'people' ? (
                     <PeopleView folders={folders} />
                 ) : (
@@ -181,9 +184,9 @@ function VaultPage() {
                 )}
             </div>
 
-
             {showAdd && <AddFolderModal onAdd={handleAddFolder} onClose={() => setShowAdd(false)} />}
         </div>
+
     );
 }
 

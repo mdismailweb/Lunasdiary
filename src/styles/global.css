@@ -2625,3 +2625,35 @@ textarea.field-input {
 
 .mobile-header { display: none; }
 .bottom-nav { display: none; }
+/* ── Vault Professional Layout ────────────────────────────── */
+.vault-layout {
+  display: flex;
+  gap: 1.5rem;
+  height: 100%;
+}
+.vault-sidebar {
+  width: 210px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.vault-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin-bottom: 0.75rem;
+}
+.vault-nav-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.vault-loading {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding: 0 0.9rem;
+}
+.vault-content {
+  flex: 1;
+  min-width: 0;
+}
