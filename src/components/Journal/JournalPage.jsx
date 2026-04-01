@@ -7,10 +7,11 @@ import * as api from '../../services/api';
 const MOODS = ['😊', '😌', '😐', '😰', '😔', '🤩', '😤', '🥱'];
 
 export default function JournalPage() {
-    const { entries, loading, create, update } = useJournal();
+    const { entries, loading, create, update, remove } = useJournal();
     const [active, setActive] = useState(null);
     const [draft, setDraft] = useState({});
     const [saving, setSaving] = useState(false);
+    const [savingMedia, setSavingMedia] = useState(false);
     const [savedAt, setSavedAt] = useState('');
     const [mediaItems, setMediaItems] = useState({ audio: [], images: [], files: [] });
     const autoSaveTimer = useRef(null);
@@ -30,6 +31,9 @@ export default function JournalPage() {
             tags: entry.tags ? entry.tags.split(',').filter(Boolean) : [],
             title: entry.title || '',
             date: entry.date || new Date().toISOString().split('T')[0],
+            audio_refs: entry.audio_refs || '',
+            image_refs: entry.image_refs || '',
+            file_refs: entry.file_refs || '',
         });
         // Load media for this entry
         if (entry.entry_id) {
@@ -71,6 +75,9 @@ export default function JournalPage() {
                 tags: (data.tags || []).join(','),
                 title: data.title,
                 date: data.date,
+                audio_refs: data.audio_refs,
+                image_refs: data.image_refs,
+                file_refs: data.file_refs,
                 status: 'published',
             });
             setSavedAt('Saved just now');
@@ -86,21 +93,102 @@ export default function JournalPage() {
     };
 
     const removeTag = (t) => onChange('tags', (draft.tags || []).filter(tag => tag !== t));
+    
+    const handleDelete = async () => {
+        if (!active || !window.confirm('Are you sure you want to delete this entry?')) return;
+        await remove(active.entry_id);
+        setActive(null);
+        setDraft({});
+    };
 
     // Media upload helpers
     const uploadMedia = async (file, mediaType) => {
         if (!active || !file) return;
-        const base64data = await api.fileToBase64(file);
-        const res = await api.uploadMedia({
-            base64data, filename: file.name, mime_type: file.type,
-            media_type: mediaType, uploaded_from: 'journal', source_id: active.entry_id,
+        setSavingMedia(true);
+        setSavedAt('Uploading media...');
+        try {
+            const base64data = await api.fileToBase64(file);
+            const res = await api.uploadMedia({
+                base64data, filename: file.name, mime_type: file.type,
+                media_type: mediaType, uploaded_from: 'journal', source_id: active.entry_id,
+            });
+            const newItem = { media_id: res.media_id, drive_link: res.drive_link, thumbnail_link: res.thumbnail_link, filename: file.name, display_name: file.name };
+            
+            const refKey = mediaType === 'image' ? 'image_refs' : mediaType === 'audio' ? 'audio_refs' : 'file_refs';
+            const currentRefs = draft[refKey] ? draft[refKey].split(',').filter(Boolean) : [];
+            currentRefs.push(res.media_id);
+            onChange(refKey, currentRefs.join(','));
+
+            setMediaItems(m => ({
+                ...m,
+                [mediaType === 'image' ? 'images' : mediaType === 'audio' ? 'audio' : 'files']:
+                    [...m[mediaType === 'image' ? 'images' : mediaType === 'audio' ? 'audio' : 'files'], newItem]
+            }));
+            setSavedAt('Media uploaded');
+        } catch (e) {
+            console.error('Upload Error:', e);
+            alert(`Media upload failed: ${e.message}. Did you re-deploy the Apps Script?`);
+            setSavedAt('Upload failed');
+        } finally {
+            setSavingMedia(false);
+        }
+    };
+
+    const handleRemoveMedia = (mediaId) => {
+        if (!active) return;
+        const idStr = String(mediaId).trim();
+        console.log(`[Media] Attempting to remove ID: "${idStr}"`);
+
+        setDraft(currentDraft => {
+            const newDraft = { ...currentDraft };
+            let typeKey = '';
+
+            // Helper to clean and filter reference strings
+            const removeIdFromRef = (refStr) => {
+                if (!refStr) return '';
+                return refStr.split(',')
+                    .map(id => String(id).trim())
+                    .filter(id => id && id !== idStr)
+                    .join(',');
+            };
+
+            // Check each possible media reference field
+            const imgRefs = removeIdFromRef(currentDraft.image_refs);
+            if (imgRefs !== (currentDraft.image_refs || '')) {
+                newDraft.image_refs = imgRefs;
+                typeKey = 'images';
+            }
+
+            const audRefs = removeIdFromRef(currentDraft.audio_refs);
+            if (audRefs !== (currentDraft.audio_refs || '')) {
+                newDraft.audio_refs = audRefs;
+                typeKey = 'audio';
+            }
+
+            const filRefs = removeIdFromRef(currentDraft.file_refs);
+            if (filRefs !== (currentDraft.file_refs || '')) {
+                newDraft.file_refs = filRefs;
+                typeKey = 'files';
+            }
+
+            if (!typeKey) {
+                console.warn(`[Media] ID "${idStr}" not found in any ref fields.`);
+                return currentDraft;
+            }
+
+            // Immediately update the local media list too
+            setMediaItems(prev => ({
+                ...prev,
+                [typeKey]: prev[typeKey].filter(m => String(m.media_id).trim() !== idStr)
+            }));
+
+            // Trigger an autosave for the new draft state
+            setSavedAt('Saving removal...');
+            clearTimeout(autoSaveTimer.current);
+            autoSaveTimer.current = setTimeout(() => doSave(newDraft), 1000);
+
+            return newDraft;
         });
-        const newItem = { media_id: res.media_id, drive_link: res.drive_link, thumbnail_link: res.thumbnail_link, filename: file.name, display_name: file.name };
-        setMediaItems(m => ({
-            ...m,
-            [mediaType === 'image' ? 'images' : mediaType === 'audio' ? 'audio' : 'files']:
-                [...m[mediaType === 'image' ? 'images' : mediaType === 'audio' ? 'audio' : 'files'], newItem]
-        }));
     };
 
     if (loading) return (
@@ -179,8 +267,15 @@ export default function JournalPage() {
                                 <label className="field-label">Location</label>
                                 <input className="field-input" placeholder="Where are you?" value={draft.location || ''} onChange={e => onChange('location', e.target.value)} />
                             </div>
-                            <span className="autosave-label">{savedAt}</span>
-                        </div>
+                             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto' }}>
+                                 <span className={`autosave-label ${savingMedia ? 'pulse' : ''}`} style={{ color: savingMedia ? 'var(--primary)' : '' }}>
+                                    {savedAt}
+                                 </span>
+                                 <button className="btn btn-ghost btn-sm" onClick={handleDelete} title="Delete this entry" style={{ color: '#ef4444' }}>
+                                     🗑️ Delete
+                                 </button>
+                             </div>
+                         </div>
 
                         {/* Tags */}
                         <div className="tags-row" style={{ marginBottom: '0.75rem' }}>
@@ -202,14 +297,12 @@ export default function JournalPage() {
                         <div className="word-count">{wc} words</div>
 
                         {/* Media row */}
-                        <MediaRow
-                            audioItems={mediaItems.audio}
-                            imageItems={mediaItems.images}
-                            fileItems={mediaItems.files}
-                            onAudioUpload={f => uploadMedia(f, 'audio')}
-                            onAudioRecord={f => uploadMedia(f, 'audio')}
-                            onImageUpload={f => uploadMedia(f, 'image')}
-                            onFileUpload={f => uploadMedia(f, 'file')}
+                        <MediaRow 
+                            active={active} 
+                            mediaItems={mediaItems} 
+                            onUpload={uploadMedia}
+                            onRecord={f => uploadMedia(f, 'audio')}
+                            onRemove={handleRemoveMedia}
                         />
                     </>
                 )}

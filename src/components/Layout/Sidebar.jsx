@@ -22,12 +22,30 @@ const TABS = [
     { id: 'delegation', icon: '📥', label: 'Delegation' },
 ];
 
-export default function Sidebar({ active, onNavigate, userName }) {
+export default function Sidebar({ active, onNavigate, userName, isOffline, onPreload, isPreloading }) {
     return (
         <aside className="sidebar">
+            <button 
+                className={`sync-btn ${isPreloading ? 'syncing' : ''}`}
+                onClick={onPreload}
+                disabled={isPreloading || isOffline}
+                title="Shuffle & Preload Vault for Offline Use"
+            >
+                <span className="sync-icon">🔄</span>
+                <span>{isPreloading ? 'Syncing...' : 'Sync Vault'}</span>
+            </button>
+
             <div className="sidebar-logo">
+
                 <h1>🌙 Luna's Notes</h1>
-                <p>Your private sanctuary</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <p>Your private sanctuary</p>
+                    {isOffline && (
+                        <span className="badge badge-draft" style={{ fontSize: '0.6rem', padding: '2px 6px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                            ☁️ Offline
+                        </span>
+                    )}
+                </div>
             </div>
 
             <nav className="sidebar-nav">

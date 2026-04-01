@@ -23,11 +23,34 @@ import TwitchPage from './components/Twitch/TwitchPage';
 import DelegationPage from './components/Delegation/DelegationPage';
 import QuickCapture from './components/Dashboard/QuickCapture';
 import * as api from './services/api';
+import { Preloader } from './services/preloader';
 
 export default function App() {
     const [tab, setTab] = useState(() => localStorage.getItem('luna_active_tab') || 'dashboard');
     const [userName, setUserName] = useState('');
     const [theme, setTheme] = useState('dark');
+    const [isOffline, setIsOffline] = useState(!navigator.onLine);
+    const [preload, setPreload] = useState({ active: false, current: 0, total: 0 });
+
+    const triggerPreload = () => {
+        if (preload.active) return;
+        setPreload({ active: true, current: 0, total: 0 });
+        Preloader.start((current, total) => {
+            setPreload({ active: current < total, current, total });
+        });
+    };
+
+    useEffect(() => {
+        const handleOnline = () => setIsOffline(false);
+
+        const handleOffline = () => setIsOffline(true);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
 
     useEffect(() => {
         // Load config on mount
@@ -75,7 +98,14 @@ export default function App() {
     };
 
     return (
-        <AppShell activeTab={tab} onNavigate={navigate} userName={userName}>
+        <AppShell 
+            activeTab={tab} 
+            onNavigate={navigate} 
+            userName={userName} 
+            isOffline={isOffline} 
+            preload={preload}
+            onPreload={triggerPreload}
+        >
             {renderTab()}
             <QuickCapture onNavigate={navigate} />
         </AppShell>

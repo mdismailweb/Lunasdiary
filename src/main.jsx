@@ -5,6 +5,17 @@ import { AudioProvider } from './context/AudioContext.jsx'
 import { ToastProvider } from './context/ToastContext.jsx'
 import './styles/global.css'
 import './styles/animations.css'
+import './styles/preloader.css'
+
+
+// ── Service Worker Registration ────────────────────────────────
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('[ServiceWorker] Registered', reg))
+            .catch(err => console.error('[ServiceWorker] Registration failed', err));
+    });
+}
 
 ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
@@ -15,3 +26,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         </AudioProvider>
     </React.StrictMode>
 )
+

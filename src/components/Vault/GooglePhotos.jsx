@@ -230,8 +230,33 @@ export default function GooglePhotos({ activeTab, folders, onTabChange }) {
     }, [activeTab, folders]);
 
     const fetchFolder = async (folder, isLoadMore = false) => {
-        setLoading(true); setError(null);
+        const cacheKey = `luna_vault_cache_${folder.folderId}`;
         const currentData = folderCache[folder.folderId] || { items: [], nextToken: null };
+
+        // ─── Instant Loading Fix ───────────────────────────────
+        // If we have nothing but there's a preloader cache, show it now
+        if (!isLoadMore && currentData.items.length === 0) {
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                try {
+                    const { items } = JSON.parse(cached);
+                    if (items?.length > 0) {
+                        const formatted = items.map(item => ({
+                            id: item.id || item.googleId, src: item.thumbnailLink, width: 400, height: 300,
+                            largeSrc: item.viewLink || item.thumbnailLink || `https://drive.google.com/uc?id=${item.id}&sz=w1200`,
+                            title: item.name, type: item.mimeType?.startsWith('video/') ? 'video' : 'image',
+                        }));
+                        setFolderCache(c => ({ ...c, [folder.folderId]: { items: formatted, nextToken: null, isFromCache: true } }));
+                    }
+                } catch (e) { console.warn('Cache error:', e); }
+            }
+        }
+
+        // Only show skeleton if we have literally zero items (even from cache)
+        const hasNoData = currentData.items.length === 0 && !localStorage.getItem(cacheKey);
+        if (hasNoData || isLoadMore) setLoading(true); 
+        
+        setError(null);
 
         try {
             const res = await getVaultMedia(folder.folderId, isLoadMore ? currentData.nextToken : null);
@@ -239,8 +264,8 @@ export default function GooglePhotos({ activeTab, folders, onTabChange }) {
             const nextToken = res?.data?.continuationToken || res?.continuationToken || null;
 
             const formatted = raw.map(item => ({
-                id: item.id, src: item.thumbnailLink, width: 400, height: 300,
-                largeSrc: item.viewLink || item.thumbnailLink, videoSrc: item.viewLink,
+                id: item.id || item.googleId, src: item.thumbnailLink, width: 400, height: 300,
+                largeSrc: item.viewLink || item.thumbnailLink || `https://drive.google.com/uc?id=${item.id}&sz=w1200`,
                 title: item.name, type: item.mimeType?.startsWith('video/') ? 'video' : 'image',
             }));
 
@@ -248,14 +273,24 @@ export default function GooglePhotos({ activeTab, folders, onTabChange }) {
                 ...c,
                 [folder.folderId]: {
                     items: isLoadMore ? [...currentData.items, ...formatted] : formatted,
-                    nextToken: nextToken
+                    nextToken: nextToken,
+                    isFromCache: false
                 }
             }));
+
+            // Sync back to local storage for next time (first page only)
+            if (!isLoadMore) {
+                localStorage.setItem(cacheKey, JSON.stringify({ items: raw, updatedAt: Date.now() }));
+            }
         } catch (err) {
             console.error('Vault fetch error:', err);
-            setError('Could not load folder. Make sure it\'s shared as "Anyone with the link".');
+            // Don't show error if we have data from cache
+            if (!folderCache[folder.folderId]?.items?.length) {
+                setError('Could not load folder. Make sure it\'s shared as "Anyone with the link".');
+            }
         } finally { setLoading(false); }
     };
+
 
     const likedIds = new Set(liked.map(l => l.id));
 

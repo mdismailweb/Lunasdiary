@@ -4,7 +4,7 @@
 // through this file. Set your deployment URL below.
 // ============================================================
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxGGPrFePWdJHKAXreiUa7pAEdA21qnx17rj9c5_E1wf_mUMI-iASxDAnXFZIjJfcrH/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzoHZ9nmIEg_-DRt4LplZGYOKM2gs_egcUlGZlb9BB_MywXlNrlcHXRNkt0ZBqYjleZ/exec';
 
 async function _call(action, params = {}) {
     console.log(`[API Request] ${action}`, params);
@@ -56,6 +56,7 @@ export const calculateStreaks = () => _call('calculateStreaks');
 // ─── Media ───────────────────────────────────────────────────
 export const uploadMedia = (params) => _call('uploadMedia', params);
 export const getMediaById = (media_id) => _call('getMediaById', { media_id });
+export const getThumbnailBase64 = (media_id) => _call('getMediaThumbnailBase64', { media_id });
 export const getMediaBySource = (source_id) => _call('getMediaBySource', { source_id });
 export const getAllMedia = (params) => _call('getAllMedia', params);
 export const updateMediaRefs = (params) => _call('updateMediaRefs', params);

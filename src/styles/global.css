@@ -1917,6 +1917,51 @@ textarea.field-input {
   transform: translateY(-2px);
 }
 
+/* ── Image Thumbnails ─────────────────────────────────────── */
+.img-thumb {
+  position: relative;
+  aspect-ratio: 1;
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.img-thumb:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.img-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.img-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 60%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 0.5rem;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.img-name {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
 .media-lib-thumb {
   aspect-ratio: 1;
   background: var(--surface2);
@@ -2422,4 +2467,48 @@ textarea.field-input {
   100% {
     background-position: -200% 0;
   }
+}
+/* -- Media Removal Buttons ---------------------------------- */
+.media-remove-btn {
+    position: absolute;
+    top: 4px;
+    left: 4px; /* Move to left to not clash with View link */
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--danger);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    z-index: 10;
+    opacity: 0.6;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.media-remove-btn:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.media-remove-btn-inline {
+    background: none;
+    border: none;
+    color: var(--danger);
+    font-size: 1.4rem;
+    line-height: 1;
+    padding: 0 4px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s, transform 0.2s;
+    flex-shrink: 0;
+}
+
+.media-remove-btn-inline:hover {
+    opacity: 1;
+    transform: scale(1.2);
 }

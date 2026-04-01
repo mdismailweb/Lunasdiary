@@ -39,18 +39,19 @@ var S = {
   TWITCH_CONFIG: 'TWITCH_CONFIG',
   SAVED_TWITCH_VIDEOS: 'SAVED_TWITCH_VIDEOS',
   DELEGATION:          'DELEGATION',
+  LUNASROOM:           'LUNASROOM_LINKS',
   LOGS: 'LOGS'
 };
 
 // Drive root folder name
-var DRIVE_ROOT = 'MyJournal App';
+var DRIVE_ROOT = 'LunasNotes';
 var DRIVE_SUBFOLDERS = [
-  'Journal Images',
-  'Journal Audio',
-  'Journal Files',
-  'Todo Media',
-  'Insight Media',
-  'Thumbnails'
+  'Journal/Images',
+  'Journal/Audio',
+  'Journal/Files',
+  'Todos',
+  'Insights',
+  'System/Thumbnails'
 ];
 
 // ── CORS HEADERS ─────────────────────────────────────────────
@@ -116,8 +117,9 @@ function doPost(e) {
       case 'calculateStreaks':    result = calculateStreaks();         break;
 
       // ── Media ──
-      case 'uploadMedia':         result = uploadMedia(params);        break;
-      case 'getMediaById':        result = getMediaById(params);       break;
+      case 'getMediaThumbnailBase64': result = getMediaThumbnailBase64(params); break;
+      case 'uploadMedia':             result = uploadMedia(params);             break;
+      case 'getMediaById':            result = getMediaById(params);            break;
       case 'getMediaBySource':    result = getMediaBySource(params);   break;
       case 'getAllMedia':          result = getAllMedia(params);        break;
       case 'updateMediaRefs':     result = updateMediaRefs(params);    break;
@@ -138,6 +140,8 @@ function doPost(e) {
       case 'saveYTDismissed': result = saveYTDismissed(params);  break;
       
       case 'getVaultMedia':        result = getVaultMedia(params);         break;
+      case 'getVaultFiles':        result = getVaultFiles(params);         break;
+      case 'getImageBase64':        result = getImageBase64(params);        break;
 
       // ── Vault Folders & Liked ──
       case 'getVaultFolders':      result = getVaultFolders();              break;
@@ -225,6 +229,11 @@ function doPost(e) {
       case 'saveDelegationItem':    result = saveDelegationItem(params);       break;
       case 'deleteDelegationItem':  result = deleteDelegationItem(params);     break;
       case 'updateDelegationRank':  result = updateDelegationRank(params);     break;
+      
+      // ── Lunasroom ──
+      case 'getLunasroomLinks':   result = getLunasroomLinks();               break;
+      case 'saveLunasroomLink':   result = saveLunasroomLink(params);         break;
+      case 'deleteLunasroomLink': result = deleteLunasroomLink(params);       break;
 
       default:
         result = { error: 'Unknown action: ' + action };
@@ -410,22 +419,38 @@ function _getRootFolder() {
   return DriveApp.createFolder(DRIVE_ROOT);
 }
 
-function _getSubfolder(subfolderName) {
-  var root = _getRootFolder();
-  var subs = root.getFoldersByName(subfolderName);
-  if (subs.hasNext()) return subs.next();
-  return root.createFolder(subfolderName);
+function _getFolderByPath(path) {
+  var parts = path.split('/');
+  var current = _getRootFolder();
+  for (var i = 0; i < parts.length; i++) {
+    var part = parts[i].trim();
+    if (!part) continue;
+    var folders = current.getFoldersByName(part);
+    if (folders.hasNext()) {
+      current = folders.next();
+    } else {
+      current = current.createFolder(part);
+    }
+  }
+  return current;
 }
 
-function _sourceFolderName(uploadedFrom) {
-  var map = {
-    journal: 'Journal Files',
-    journal_image: 'Journal Images',
-    journal_audio: 'Journal Audio',
-    todo: 'Todo Media',
-    insight: 'Insight Media'
-  };
-  return map[uploadedFrom] || 'Journal Files';
+function _getSubfolder(subfolderName) {
+  // Backwards compatibility: if it doesn't contain '/', treat it as a top-level subfolder
+  // But prefer hierarchical paths now.
+  return _getFolderByPath(subfolderName);
+}
+
+function _sourceFolderName(uploadedFrom, mediaType) {
+  var module = uploadedFrom || 'journal';
+  if (module === 'journal') {
+    if (mediaType === 'image') return 'Journal/Images';
+    if (mediaType === 'audio') return 'Journal/Audio';
+    return 'Journal/Files';
+  }
+  if (module === 'todo') return 'Todos';
+  if (module === 'insight') return 'Insights';
+  return 'Journal/Files';
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -514,6 +539,10 @@ function initializeApp() {
   sheetDefs[S.TWITCH_CONFIG] = ['client_id', 'client_secret'];
   sheetDefs[S.SAVED_TWITCH_VIDEOS] = ['video_id', 'title', 'user_name', 'user_id', 'thumbnail_url', 'created_at', 'type', 'url', 'duration', 'saved_at'];
   sheetDefs[S.DELEGATION] = ['id', 'title', 'source', 'link', 'category', 'importance', 'note', 'added_at', 'rank', 'due_date'];
+  sheetDefs[S.LUNASROOM] = ['id', 'title', 'url', 'thumbnail', 'added_at', 'last_viewed', 'category', 'tags'];
+  
+  sheetDefs[S.VAULT_FOLDERS] = ['ID', 'Name', 'FolderID', 'FaceGroupsJSON', 'CreatedAt'];
+  sheetDefs[S.VAULT_FACES] = ['FolderID', 'GroupID', 'Label', 'CoverImageID', 'MemberImageIDs', 'CreatedAt'];
 
   var created = [];
   Object.keys(sheetDefs).forEach(function(name) {
@@ -1095,15 +1124,13 @@ function uploadMedia(params) {
   var blob    = Utilities.newBlob(bytes, params.mime_type || 'application/octet-stream', params.filename);
   var ext     = params.filename.split('.').pop().toLowerCase();
 
-  // Determine subfolder
-  var subfolderName;
-  if (params.media_type === 'image') subfolderName = params.uploaded_from === 'journal' ? 'Journal Images' : 'Insight Media';
-  else if (params.media_type === 'audio') subfolderName = 'Journal Audio';
-  else subfolderName = params.uploaded_from === 'todo' ? 'Todo Media' : params.uploaded_from === 'insight' ? 'Insight Media' : 'Journal Files';
+  // Determine hierarchical path
+  var folderPath = _sourceFolderName(params.uploaded_from, params.media_type);
+  if (params.media_type === 'image' && params.uploaded_from !== 'journal' && params.uploaded_from !== 'todo') {
+    folderPath = 'Insights'; // fallback for backward compatibility
+  }
 
-  if (params.uploaded_from === 'todo') subfolderName = 'Todo Media';
-
-  var folder   = _getSubfolder(subfolderName);
+  var folder   = _getFolderByPath(folderPath);
   var file     = folder.createFile(blob);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 
@@ -1136,7 +1163,7 @@ function uploadMedia(params) {
     tags:             params.tags            || '',
     notes:            params.notes           || '',
     is_orphan:        !params.source_id,
-    drive_folder:     subfolderName,
+    drive_folder:     folderPath,
     status:           'active'
   };
   _appendRow(S.MEDIA, mediaRow);
@@ -1502,67 +1529,131 @@ function saveYTDismissed(params) {
 
 function getVaultMedia(params) {
   var folderId = params.folderId;
-  var token = params.continuationToken;
-  var batchSize = 300; // Snappier initial load
-  
-  var files;
-  var folderName = '';
-  
-  if (token) {
-    files = DriveApp.continueFileIterator(token);
-  } else {
-    if (!folderId) throw new Error('folderId required');
-    try {
-      var folder = DriveApp.getFolderById(folderId);
-      folderName = folder.getName();
-      // Search only for images and videos within the folder
-      var query = "'" + folderId + "' in parents and (mimeType contains 'image/' or mimeType contains 'video/')";
-      files = DriveApp.searchFiles(query);
-    } catch (e) {
-      throw new Error('Folder not found or access denied. Error: ' + e.message);
-    }
-  }
+  var token = params.continuationToken; // For shuffled mode, this will be our remaining IDs
+  var batchSize = 100; // Smaller batches for faster UI response with large sets
   
   var media = [];
-  var totalChecked = 0;
-  
-  while (files.hasNext() && totalChecked < batchSize) {
-    var file = files.next();
-    totalChecked++;
-    
-    var mime = file.getMimeType() || '';
-    var isImage = mime.indexOf('image/') !== -1;
-    var id = file.getId();
-    
-    media.push({
-      id: id,
-      name: file.getName(),
-      mimeType: mime,
-      thumbnailLink: 'https://drive.google.com/thumbnail?id=' + id + '&sz=w300', // Small by default
-      viewLink: isImage 
-        ? 'https://drive.google.com/thumbnail?id=' + id + '&sz=w2000'
-        : 'https://drive.google.com/file/d/' + id + '/preview',
-      createdTime: file.getDateCreated() ? file.getDateCreated().toISOString() : ''
-    });
+  var folderName = '';
+  var remainingIds = [];
+
+  try {
+    if (token && token.indexOf('ids:') === 0) {
+      // Continuation: token is comma-separated IDs "ids:id1,id2,..."
+      remainingIds = token.substring(4).split(',');
+    } else {
+      // Fresh load: fetch ALL files and shuffle
+      if (!folderId) throw new Error('folderId required');
+      var folder = DriveApp.getFolderById(folderId);
+      folderName = folder.getName();
+      
+      var query = "'" + folderId + "' in parents and (mimeType contains 'image/' or mimeType contains 'video/')";
+      var filesIterator = DriveApp.searchFiles(query);
+      var allFiles = [];
+      
+      while (filesIterator.hasNext()) {
+        allFiles.push(filesIterator.next());
+      }
+      
+      // Fisher-Yates Shuffle
+      for (var i = allFiles.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = allFiles[i];
+        allFiles[i] = allFiles[j];
+        allFiles[j] = temp;
+      }
+      
+      remainingIds = allFiles.map(function(f) { return f.getId(); });
+    }
+
+    // Take the next batch
+    var batchIds = remainingIds.slice(0, batchSize);
+    var nextRemaining = remainingIds.slice(batchSize);
+
+    // Resolve metadata for the batch
+    media = batchIds.map(function(id) {
+      try {
+        var file = DriveApp.getFileById(id);
+        var mime = file.getMimeType() || '';
+        var isImage = mime.indexOf('image/') !== -1;
+        return {
+          id: id,
+          name: file.getName(),
+          mimeType: mime,
+          thumbnailLink: 'https://drive.google.com/thumbnail?id=' + id + '&sz=w300',
+          viewLink: isImage 
+            ? 'https://drive.google.com/thumbnail?id=' + id + '&sz=w2000'
+            : 'https://drive.google.com/file/d/' + id + '/preview',
+          createdTime: file.getDateCreated() ? file.getDateCreated().toISOString() : ''
+        };
+      } catch (e) { return null; }
+    }).filter(Boolean);
+
+    var nextToken = nextRemaining.length > 0 ? 'ids:' + nextRemaining.join(',') : null;
+
+    return {
+      items: media,
+      continuationToken: nextToken,
+      folderName: folderName,
+      diagnostics: {
+        batchSize: media.length,
+        remainingInQueue: nextRemaining.length,
+        hasMore: !!nextToken
+      }
+    };
+
+  } catch (e) {
+    throw new Error('Vault error: ' + e.message);
   }
+}
+
+/**
+ * Fetch metadata for specific file IDs.
+ * params: { fileIds: string[] }
+ */
+function getVaultFiles(params) {
+  var fileIds = params.fileIds || [];
+  if (!Array.isArray(fileIds) || fileIds.length === 0) return { items: [] };
   
-  // Sort this batch (most recent first)
-  media.sort(function(a, b) { 
-    return (b.createdTime || '').localeCompare(a.createdTime || '');
+  var media = [];
+  fileIds.forEach(function(id) {
+    try {
+      var file = DriveApp.getFileById(id);
+      var mime = file.getMimeType() || '';
+      var isImage = mime.indexOf('image/') !== -1;
+      
+      media.push({
+        id: id,
+        name: file.getName(),
+        mimeType: mime,
+        thumbnailLink: 'https://drive.google.com/thumbnail?id=' + id + '&sz=w300',
+        viewLink: isImage 
+          ? 'https://drive.google.com/thumbnail?id=' + id + '&sz=w2000'
+          : 'https://drive.google.com/file/d/' + id + '/preview',
+        createdTime: file.getDateCreated() ? file.getDateCreated().toISOString() : ''
+      });
+    } catch (e) {
+      // Skip files we can't find or access
+      console.error('Error fetching file ' + id + ': ' + e.message);
+    }
   });
   
-  var nextToken = files.hasNext() ? files.getContinuationToken() : null;
-  
-  return {
-    items: media,
-    continuationToken: nextToken,
-    folderName: folderName,
-    diagnostics: {
-      checkedInBatch: totalChecked,
-      mediaInBatch: media.length,
-      hasMore: !!nextToken
-    }
-  };
+  return { items: media };
+}
+
+// Fetches a Drive file by ID and returns it as a base64 data URL.
+function getImageBase64(params) {
+  var fileId = params.fileId;
+  if (!fileId) throw new Error('fileId required');
+  try {
+    var file = DriveApp.getFileById(fileId);
+    var blob = file.getBlob();
+    var bytes = blob.getBytes();
+    var base64 = Utilities.base64Encode(bytes);
+    var mimeType = blob.getContentType() || 'image/jpeg';
+    return { dataUrl: 'data:' + mimeType + ';base64,' + base64, mimeType: mimeType };
+  } catch (e) {
+    throw new Error('Could not fetch image ' + fileId + ': ' + e.message);
+  }
 }
 
 // ── VAULT FOLDERS ─────────────────────────────────────────────
@@ -1578,24 +1669,30 @@ function _getOrCreateSheet(name, headers) {
 }
 
 function getVaultFolders() {
-  var sheet = _getOrCreateSheet(S.VAULT_FOLDERS, ['ID', 'Name', 'FolderID', 'CreatedAt']);
+  var sheet = _getOrCreateSheet(S.VAULT_FOLDERS, ['ID', 'Name', 'FolderID', 'FaceGroupsJSON', 'CreatedAt']);
   var data = sheet.getDataRange().getValues();
   if (data.length <= 1) return { folders: [] };
   var folders = data.slice(1).map(function(row) {
-    return { id: String(row[0]), name: String(row[1]), folderId: String(row[2]), createdAt: String(row[3]) };
+    return { 
+      id: String(row[0]), 
+      name: String(row[1]), 
+      folderId: String(row[2]), 
+      hasGroups: !!String(row[3]),
+      createdAt: String(row[4]) 
+    };
   }).filter(function(f) { return f.id && f.folderId; });
   return { folders: folders };
 }
 
 function addVaultFolder(params) {
-  var sheet = _getOrCreateSheet(S.VAULT_FOLDERS, ['ID', 'Name', 'FolderID', 'CreatedAt']);
+  var sheet = _getOrCreateSheet(S.VAULT_FOLDERS, ['ID', 'Name', 'FolderID', 'FaceGroupsJSON', 'CreatedAt']);
   var id = Date.now().toString();
-  sheet.appendRow([id, params.name, params.folderId, new Date().toISOString()]);
+  sheet.appendRow([id, params.name, params.folderId, '', new Date().toISOString()]);
   return { success: true, id: id };
 }
 
 function removeVaultFolder(params) {
-  var sheet = _getOrCreateSheet(S.VAULT_FOLDERS, ['ID', 'Name', 'FolderID', 'CreatedAt']);
+  var sheet = _getOrCreateSheet(S.VAULT_FOLDERS, ['ID', 'Name', 'FolderID', 'FaceGroupsJSON', 'CreatedAt']);
   var data = sheet.getDataRange().getValues();
   for (var i = data.length - 1; i >= 1; i--) {
     if (String(data[i][0]) === String(params.id)) {
@@ -1824,7 +1921,7 @@ function logStreak(params) {
        return { success: true, action: 'already_logged' };
     }
   }
-  sheet.appendRow([params.streak_id, logDate]);
+  sheet.appendRow([params.streak_id, "'" + logDate]);
   return { success: true, action: 'logged' };
 }
 function getStreakLogs(params) {
@@ -1835,7 +1932,9 @@ function getStreakLogs(params) {
     if (!params.streak_id || String(data[i][0]) === String(params.streak_id)) {
       var d = data[i][1];
       if (d instanceof Date) {
-        d = Utilities.formatDate(d, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+        // Use the Spreadsheet's timezone specifically when reading from the sheet
+        var ssTz = _ss().getSpreadsheetTimeZone();
+        d = Utilities.formatDate(d, ssTz, 'yyyy-MM-dd');
       }
       result.push({ streak_id: data[i][0], date: String(d) });
     }
@@ -2077,24 +2176,29 @@ function getTwitchDismissedIds() {
 }
 
 // ── VAULT FACE RECOGNITION ────────────────────────────────────
+// ── VAULT FACE RECOGNITION ────────────────────────────────────
 function getFaceGroups(params) {
   var folderId = params.folderId;
   if (!folderId) return { groups: [] };
   
   var sheet = _getOrCreateSheet(S.VAULT_FACES, ['FolderID', 'GroupID', 'Label', 'CoverImageID', 'MemberImageIDs', 'CreatedAt']);
   var data = sheet.getDataRange().getValues();
-  if (data.length <= 1) return { groups: [] };
   
   var groups = data.slice(1)
     .filter(function(row) { return String(row[0]) === String(folderId); })
     .map(function(row) {
+      var memberIds = String(row[4]).split(',');
       return {
         folderId: String(row[0]),
         groupId: String(row[1]),
         label: String(row[2]),
         coverImageId: String(row[3]),
-        memberImageIds: String(row[4]).split(','),
-        createdAt: String(row[5])
+        memberImageIds: memberIds,
+        createdAt: String(row[5]),
+        // Reconstruct basic member objects for UI preview
+        _members: memberIds.map(function(id) { 
+          return { id: id, src: 'https://drive.google.com/thumbnail?id=' + id + '&sz=w200' }; 
+        })
       };
     });
     
@@ -2106,19 +2210,17 @@ function saveFaceGroups(params) {
   var groups = params.groups; // Array of group objects
   if (!folderId || !groups) throw new Error('folderId and groups required');
   
-  var sheet = _getOrCreateSheet(S.VAULT_FACES, ['FolderID', 'GroupID', 'Label', 'CoverImageID', 'MemberImageIDs', 'CreatedAt']);
-  var data = sheet.getDataRange().getValues();
+  var facesSheet = _getOrCreateSheet(S.VAULT_FACES, ['FolderID', 'GroupID', 'Label', 'CoverImageID', 'MemberImageIDs', 'CreatedAt']);
+  var facesData = facesSheet.getDataRange().getValues();
   
-  // Remove all existing groups for this folder to overwrite them
-  for (var i = data.length - 1; i >= 1; i--) {
-    if (String(data[i][0]) === String(folderId)) {
-      sheet.deleteRow(i + 1);
+  // 1. Overwrite in S.VAULT_FACES (detailed rows for robustness)
+  for (var i = facesData.length - 1; i >= 1; i--) {
+    if (String(facesData[i][0]) === String(folderId)) {
+      facesSheet.deleteRow(i + 1);
     }
   }
-  
-  // Append new group data
   groups.forEach(function(g) {
-    sheet.appendRow([
+    facesSheet.appendRow([
       folderId,
       g.groupId,
       g.label || '(unknown)',
@@ -2127,6 +2229,27 @@ function saveFaceGroups(params) {
       new Date().toISOString()
     ]);
   });
+  
+  // 2. Overwrite in VAULT_FOLDERS (the "dedicated json column")
+  var foldersSheet = _getOrCreateSheet(S.VAULT_FOLDERS, ['ID', 'Name', 'FolderID', 'FaceGroupsJSON', 'CreatedAt']);
+  var foldersData = foldersSheet.getDataRange().getValues();
+  var folderRow = -1;
+  for (var i = 1; i < foldersData.length; i++) {
+    if (String(foldersData[i][2]) === String(folderId)) {
+      folderRow = i + 1;
+      break;
+    }
+  }
+  
+  if (folderRow > 0) {
+    var jsonString = JSON.stringify(groups);
+    // Spreadsheet cells have limits (~50k chars). If exceeded, we mark it.
+    if (jsonString.length < 45000) {
+      foldersSheet.getRange(folderRow, 4).setValue(jsonString);
+    } else {
+      foldersSheet.getRange(folderRow, 4).setValue('DATA_TOO_LARGE_STORED_IN_FACES_SHEET');
+    }
+  }
   
   return { success: true, count: groups.length };
 }
@@ -2203,4 +2326,68 @@ function updateDelegationRank(params) {
     sheet.getRange(row, rankCol + 1).setValue(params.rank);
   }
   return { success: true };
+}
+
+// ── Lunasroom Actions ──────────────────────────────────────────
+function getLunasroomLinks() {
+  return _sheetToObjects(S.LUNASROOM);
+}
+
+function saveLunasroomLink(params) {
+  if (!params.url) throw new Error('URL required');
+  
+  // Ensure sheet exists
+  _getOrCreateSheet(S.LUNASROOM, ['id', 'title', 'url', 'thumbnail', 'added_at', 'last_viewed', 'category', 'tags']);
+  
+  var id = params.id || Date.now().toString();
+  var item = {
+    id:          id,
+    title:       params.title || params.url,
+    url:         params.url,
+    thumbnail:   params.thumbnail || '',
+    added_at:    _now(),
+    last_viewed: '',
+    category:    params.category || '',
+    tags:        params.tags || ''
+  };
+  var existingIdx = _findRow(S.LUNASROOM, 'id', id);
+  if (existingIdx > 0) {
+    _updateRow(S.LUNASROOM, 'id', id, item);
+  } else {
+    _appendRow(S.LUNASROOM, item);
+  }
+  return item;
+}
+
+function deleteLunasroomLink(params) {
+  if (!params.id) throw new Error('ID required');
+  var row = _findRow(S.LUNASROOM, 'id', params.id);
+  if (row > 0) {
+    _sheet(S.LUNASROOM).deleteRow(row);
+  }
+  return { success: true };
+}
+
+
+/**
+ * BULLETPROOF THUMBNAILS: Returns a base64 data URI for an image.
+ */
+function getMediaThumbnailBase64(params) {
+  try {
+    if (!params.media_id) throw new Error('media_id required');
+    var media = _getRowById(S.MEDIA, 'media_id', params.media_id);
+    if (!media) throw new Error('Media not found');
+    
+    var fileId = media.drive_file_id;
+    var file = DriveApp.getFileById(fileId);
+    var blob = file.getBlob();
+    var base64 = Utilities.base64Encode(blob.getBytes());
+    return {
+      media_id: params.media_id,
+      mime_type: blob.getContentType(),
+      base64: 'data:' + blob.getContentType() + ';base64,' + base64
+    };
+  } catch (e) {
+    return { error: e.message };
+  }
 }
