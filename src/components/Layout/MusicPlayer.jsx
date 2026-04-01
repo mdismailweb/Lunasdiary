@@ -59,19 +59,34 @@ export default function MusicPlayer() {
             videoId,
             playerVars: {
                 autoplay: 1, controls: 0, loop: 1,
-                playlist: videoId, rel: 0, modestbranding: 1
+                playlist: videoId, rel: 0, modestbranding: 1, playsinline: 1
             },
             events: {
                 onReady: (e) => {
                     e.target.setVolume(muted ? 0 : Math.round(volume * 100));
                     e.target.playVideo();
                     setPlaying(true);
+                    
                     // Grab the video title for the bottom bar
                     try {
                         const title = e.target.getVideoData()?.title;
-                        if (title) setTrackName(title);
+                        if (title) {
+                            setTrackName(title);
+                            if ('mediaSession' in navigator) {
+                                navigator.mediaSession.metadata = new window.MediaMetadata({
+                                    title: title,
+                                    artist: 'Luna Radio (YouTube)',
+                                    album: 'Luna Vault',
+                                    artwork: [{ src: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' }]
+                                });
+                            }
+                        }
                     } catch (_) { }
                 },
+                onStateChange: (e) => {
+                    if (e.data === window.YT.PlayerState.PLAYING) setPlaying(true);
+                    if (e.data === window.YT.PlayerState.PAUSED) setPlaying(false);
+                }
             },
         });
     }, [volume, muted, setPlaying]);
@@ -100,11 +115,44 @@ export default function MusicPlayer() {
         if (!audio) return;
         audio.volume = volume;
         registerMusic(audio);
-        if (STATIONS[0].id === 'ambience') {
-            createYTPlayer(pickRandom());
-        } else {
-            audio.src = STATIONS[0].url;
-            audio.play().catch(() => { });
+
+        const tryAutoplay = async () => {
+            // Attach interaction trap to resume media context on user's first tap/click.
+            // This bypasses strict autoplay blocks on both desktop and mobile safely.
+            const onFirstInteraction = () => {
+                if (audio.paused && !playing) {
+                    audio.play().catch(() => {});
+                }
+                if (ytPlayer.current && !playing) {
+                    ytPlayer.current.playVideo();
+                }
+                document.removeEventListener('click', onFirstInteraction);
+                document.removeEventListener('touchstart', onFirstInteraction);
+            };
+            document.addEventListener('click', onFirstInteraction);
+            document.addEventListener('touchstart', onFirstInteraction, { passive: true });
+
+            if (STATIONS[0].id === 'ambience') {
+                createYTPlayer(pickRandom());
+            } else {
+                audio.src = STATIONS[0].url;
+                audio.play().catch(() => { });
+            }
+        };
+
+        tryAutoplay();
+
+        // Setup Media Session API for background controls
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.setActionHandler('play', () => togglePlay());
+            navigator.mediaSession.setActionHandler('pause', () => togglePlay());
+            // Pre-fill initial metadata
+            navigator.mediaSession.metadata = new window.MediaMetadata({
+                title: STATIONS[0].desc,
+                artist: STATIONS[0].label,
+                album: 'Luna Vault',
+                artwork: [{ src: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' }]
+            });
         }
     }, []); // eslint-disable-line
 
@@ -216,6 +264,15 @@ export default function MusicPlayer() {
             if (!a) return;
             a.src = st.url;
             a.play().catch(() => { });
+            
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = new window.MediaMetadata({
+                    title: st.desc,
+                    artist: st.label,
+                    album: 'Luna Vault',
+                    artwork: [{ src: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' }]
+                });
+            }
         }
     };
 
