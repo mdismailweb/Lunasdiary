@@ -323,3 +323,60 @@ video.lightbox-img {
   cursor: pointer;
   z-index: 10;
 }
+/* ── Vault Responsive Layout ──────────────────────────────── */
+@media (max-width: 768px) {
+  .vault-layout {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  .vault-sidebar {
+    width: 100% !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+  }
+  
+  .vault-title {
+    display: none !important; /* Hide title on mobile to save space */
+  }
+
+  .vault-nav-scroll {
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    padding-bottom: 8px !important;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    gap: 8px !important;
+  }
+  
+  .vault-nav-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Make nav buttons horizontal pills on mobile */
+  .vault-sidebar button {
+    white-space: nowrap !important;
+    min-width: max-content !important;
+    border-radius: 100px !important;
+    padding: 0.5rem 1rem !important;
+  }
+
+  .vault-divider {
+    display: none !important;
+  }
+
+  /* Reduce the padding so grid area has more space */
+  .vault-content {
+    margin-top: 0 !important;
+    width: 100% !important;
+    overflow-x: hidden !important;
+  }
+}
+/* ── Floating Action Button Adjust ────────────────────────── */
+@media (max-width: 768px) {
+  .fab {
+    bottom: calc(85px + env(safe-area-inset-bottom)) !important;
+    right: 1.25rem !important;
+    transform: scale(0.9);
+  }
+}
