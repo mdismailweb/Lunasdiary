@@ -46,37 +46,34 @@ export const Preloader = {
                 return;
             }
 
-            // 2. Discovery Phase: Loop through folders until we find something
+            // 2. Discovery Phase: Get 500 from newdisk + all liked images
             let pool = [];
             let targetFolder = null;
 
-            // Prioritize "newdisk" but be ready to fallback
-            const sortedFolders = [...folders].sort((a, b) => {
-                const aIsNew = a.name?.toLowerCase().includes('newdisk');
-                const bIsNew = b.name?.toLowerCase().includes('newdisk');
-                return bIsNew - aIsNew; 
-            });
+            // Find "newdisk" folder specifically
+            const newdiskFolder = folders.find(f => f.name?.toLowerCase().includes('newdisk'));
+            const folderToScan = newdiskFolder || folders[0]; // Fallback to first folder if newdisk not found
 
-            for (const folder of sortedFolders) {
-                console.log(`[Preloader] Discovery: Scanning ${folder.name}...`);
+            if (folderToScan) {
+                console.log(`[Preloader] Fetching from: ${folderToScan.name}...`);
                 let nextToken = null;
-                let folderPool = [];
                 
-                // Fetch up to 3 pages (~300 items) per folder for discovery
-                for (let i = 0; i < 3; i++) {
-                    const res = await getVaultMedia(folder.folderId, nextToken);
+                // Fetch pages until we have 500 items or run out of pages
+                while (pool.length < 500) {
+                    const res = await getVaultMedia(folderToScan.folderId, nextToken);
                     const contents = res?.data?.items || res?.items || [];
-                    folderPool = [...folderPool, ...contents];
+                    pool = [...pool, ...contents];
                     nextToken = res?.data?.continuationToken || res?.continuationToken || null;
-                    if (!nextToken || folderPool.length >= 300) break;
+                    
+                    console.log(`[Preloader] Fetched batch: ${contents.length} items (total: ${pool.length})`);
+                    
+                    if (!nextToken) {
+                        console.log(`[Preloader] Reached end of folder. Total: ${pool.length} items`);
+                        break;
+                    }
                 }
-
-                if (folderPool.length > 0) {
-                    pool = folderPool;
-                    targetFolder = folder;
-                    console.log(`[Preloader] Target Found! Scanning ${folder.name} (${pool.length} items)`);
-                    break; 
-                }
+                
+                targetFolder = folderToScan;
             }
 
             // 3. Get Liked Images
@@ -96,8 +93,11 @@ export const Preloader = {
                 [pool[i], pool[j]] = [pool[j], pool[i]];
             }
 
+            // Use all from newdisk (up to 500) + all liked images
             const targetMedia = pool.slice(0, 500);
             const masterPool = [...likedItems, ...targetMedia];
+            
+            console.log(`[Preloader] Syncing: ${targetMedia.length} from newdisk + ${likedItems.length} liked = ${masterPool.length} total`);
 
             // 5. Save the lists for Instant Loading
             if (targetFolder) {
