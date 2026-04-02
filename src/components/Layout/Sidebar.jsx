@@ -20,6 +20,7 @@ const TABS = [
     { id: 'yearlyreview', icon: '🔮', label: 'Yearly Review' },
     { id: 'twitch', icon: '🎮', label: 'Twitch' },
     { id: 'delegation', icon: '📥', label: 'Delegation' },
+    { id: 'notifications', icon: '🔔', label: 'Notifications' },
 ];
 
 export default function Sidebar({ active, onNavigate, userName, isOffline, onPreload, isPreloading, isOpen, onClose }) {

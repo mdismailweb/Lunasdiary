@@ -2456,6 +2456,201 @@ textarea.field-input {
       rgba(255, 255, 255, 0.05) 50%,
       var(--surface2) 75%);
   background-size: 200% 100%;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  color: #fff;
+  font-size: 1.3rem;
+  padding: 0.5rem;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* ── Recording indicator ──────────────────────────────────── */
+.rec-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.rec-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+  animation: rec-pulse 1s ease-in-out infinite;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+
+  .stats-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .media-row {
+    grid-template-columns: 1fr;
+  }
+
+  .masonry-grid {
+    columns: 1;
+  }
+
+  .journal-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .content-area {
+    padding: 1rem;
+  }
+}
+
+/* ── Scrollbar ────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface2);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ── YouTube Modal Player ─────────────────────────────── */
+.yt-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  animation: fade-in 0.2s ease;
+}
+
+.yt-modal-content {
+  position: relative;
+  width: 100%;
+  max-width: 1000px;
+  background: #000;
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.yt-video-container {
+  position: relative;
+  padding-bottom: 56.25%;
+  /* 16:9 ratio */
+  height: 0;
+  overflow: hidden;
+}
+
+.yt-video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.yt-modal-close {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  z-index: 2001;
+}
+
+.yt-modal-close:hover {
+  color: var(--accent);
+}
+
+@media (max-width: 768px) {
+  .yt-modal-overlay {
+    padding: 0.5rem;
+  }
+
+  .yt-modal-close {
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+  }
+}
+
+/* ── Twitch Integration ─────────────────────────────────── */
+.twitch-page .yt-channel-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.twitch-page .yt-channel-card:hover {
+  border-color: #a970ff;
+  background: rgba(169, 112, 255, 0.05);
+}
+
+.dash-videos-row::-webkit-scrollbar {
+  height: 4px;
+}
+
+.dash-videos-row {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* ── Skeleton Loading ───────────────────────────────────── */
+.skeleton {
+  background: var(--surface2);
+  background: linear-gradient(90deg,
+      var(--surface2) 25%,
+      rgba(255, 255, 255, 0.05) 50%,
+      var(--surface2) 75%);
+  background-size: 200% 100%;
   animation: skeleton-loading 1.5s infinite;
 }
 
@@ -2513,6 +2708,7 @@ textarea.field-input {
     transform: scale(1.2);
 }
 
+/* -- Mobile Navigation & Header --------------------------- */
 /* -- Mobile Navigation & Header --------------------------- */
 @media (max-width: 768px) {
   .mobile-header {
@@ -2625,7 +2821,8 @@ textarea.field-input {
 
 .mobile-header { display: none; }
 .bottom-nav { display: none; }
-/* ── Vault Professional Layout ────────────────────────────── */
+
+/* -- Vault Professional Layout ------------------------------ */
 .vault-layout {
   display: flex;
   gap: 1.5rem;
@@ -2657,3 +2854,133 @@ textarea.field-input {
   flex: 1;
   min-width: 0;
 }
+
+/* -- Journal Calendar --------------------------------------- */
+.journal-calendar {
+  padding: 0.5rem;
+  background: var(--surface);
+  border-radius: var(--radius);
+}
+
+.cal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0 0.5rem;
+}
+
+.cal-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.cal-nav-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.1rem;
+  transition: all 0.2s;
+}
+
+.cal-nav-btn:hover {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.cal-grid-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 0.5rem;
+}
+
+.cal-day-label {
+  text-align: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.cal-cell {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cal-cell:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-2px);
+  z-index: 2;
+}
+
+.cal-cell.is-today {
+  border: 2px solid var(--success) !important; /* Solid green for today */
+  background: rgba(76, 175, 125, 0.1);
+  box-shadow: inset 0 0 10px rgba(76, 175, 125, 0.2);
+}
+
+.cal-cell.has-entry {
+  font-weight: 800;
+  border-color: var(--mood-color, var(--accent));
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 0 12px var(--mood-color, var(--accent-dim));
+  animation: cal-glow-pulse 3s infinite ease-in-out;
+  transform: scale(1.15) !important;
+  z-index: 2;
+}
+
+.cal-cell.active {
+  background: var(--accent) !important;
+  color: #1a1a2e !important;
+  border-color: #fff !important;
+  box-shadow: 0 0 25px var(--accent) !important;
+  transform: scale(1.25) !important;
+  z-index: 10 !important;
+}
+
+.cal-cell.has-entry.active {
+  border-color: #fff !important;
+  box-shadow: 0 0 30px var(--mood-color, var(--accent)) !important;
+}
+
+.cal-legend {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+@keyframes cal-glow-pulse {
+  0%, 100% { opacity: 0.8; box-shadow: 0 0 10px var(--mood-color, var(--accent-dim)); }
+  50% { opacity: 1; box-shadow: 0 0 18px var(--mood-color, var(--accent-dim)); }
+}
+

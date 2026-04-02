@@ -21,6 +21,7 @@ import WritingPage from './components/Writing/WritingPage';
 import YearlyReviewPage from './components/YearlyReview/YearlyReviewPage';
 import TwitchPage from './components/Twitch/TwitchPage';
 import DelegationPage from './components/Delegation/DelegationPage';
+import NotificationsPage from './components/Notifications/NotificationsPage';
 import * as api from './services/api';
 import { Preloader } from './services/preloader';
 
@@ -92,6 +93,7 @@ export default function App() {
             case 'yearlyreview': return <YearlyReviewPage />;
             case 'twitch': return <TwitchPage />;
             case 'delegation': return <DelegationPage />;
+            case 'notifications': return <NotificationsPage />;
             default: return <Dashboard onNavigate={navigate} />;
         }
     };

@@ -40,6 +40,7 @@ var S = {
   SAVED_TWITCH_VIDEOS: 'SAVED_TWITCH_VIDEOS',
   DELEGATION:          'DELEGATION',
   LUNASROOM:           'LUNASROOM_LINKS',
+  NOTIFICATIONS:       'NOTIFICATIONS',
   LOGS: 'LOGS'
 };
 
@@ -234,6 +235,12 @@ function doPost(e) {
       case 'getLunasroomLinks':   result = getLunasroomLinks();               break;
       case 'saveLunasroomLink':   result = saveLunasroomLink(params);         break;
       case 'deleteLunasroomLink': result = deleteLunasroomLink(params);       break;
+      
+      // ── Notifications ──
+      case 'getNotifications':    result = getNotifications();               break;
+      case 'saveNotification':    result = saveNotification(params);         break;
+      case 'deleteNotification':  result = deleteNotification(params);       break;
+      case 'checkNewContent':     result = checkNewContent(params);          break;
 
       default:
         result = { error: 'Unknown action: ' + action };
@@ -543,6 +550,7 @@ function initializeApp() {
   
   sheetDefs[S.VAULT_FOLDERS] = ['ID', 'Name', 'FolderID', 'FaceGroupsJSON', 'CreatedAt'];
   sheetDefs[S.VAULT_FACES] = ['FolderID', 'GroupID', 'Label', 'CoverImageID', 'MemberImageIDs', 'CreatedAt'];
+  sheetDefs[S.NOTIFICATIONS] = ['id', 'label', 'time', 'days', 'message', 'enabled', 'type', 'last_triggered', 'updatedAt'];
 
   var created = [];
   Object.keys(sheetDefs).forEach(function(name) {
@@ -2390,4 +2398,73 @@ function getMediaThumbnailBase64(params) {
   } catch (e) {
     return { error: e.message };
   }
+}
+
+
+// ---------------------------------------------------------------
+// NOTIFICATION ACTIONS
+// ---------------------------------------------------------------
+
+function getNotifications() {
+  return _sheetToObjects(S.NOTIFICATIONS);
+}
+
+function saveNotification(params) {
+  var id = params.id || 'notif-' + Date.now();
+  var item = {
+    id: id,
+    label: params.label || '',
+    time: params.time || '',
+    days: params.days || '',
+    message: params.message || '',
+    enabled: params.enabled !== undefined ? params.enabled : true,
+    type: params.type || 'SCHEDULED',
+    last_triggered: params.last_triggered || '',
+    updatedAt: _now()
+  };
+  
+  var row = _findRow(S.NOTIFICATIONS, 'id', id);
+  if (row > 0) {
+    _updateRow(S.NOTIFICATIONS, 'id', id, item);
+  } else {
+    _appendRow(S.NOTIFICATIONS, item);
+  }
+  return item;
+}
+
+function deleteNotification(params) {
+  if (!params.id) throw new Error('ID required');
+  var row = _findRow(S.NOTIFICATIONS, 'id', params.id);
+  if (row > 0) {
+    _sheet(S.NOTIFICATIONS).deleteRow(row);
+  }
+  return { success: true };
+}
+
+function checkNewContent(params) {
+  var results = [];
+  var lastCheck = params.lastCheck || '';
+  
+  // 1. Check YouTube Sync
+  var ytChannels = _sheetToObjects(S.TWITCH_CHANNELS); // Reusing logic for YT
+  // In a real app, you would fetch YT API here. 
+  // For now, we simulate finding one new item if a sync is triggered manually or periodically.
+  
+  // 2. Check Time Capsules
+  var capsules = _sheetToObjects(S.TIME_CAPSULES);
+  var now = _now();
+  capsules.forEach(function(c) {
+    if (!c.is_unlocked && c.unlock_date <= now) {
+      results.push({
+        type: 'SYNC_CAPSULE',
+        title: 'Memory Unlocked!',
+        message: 'A special memory from ' + c.created_at + ' is ready.',
+        data: c
+      });
+      // Mark as unlocked so we don't notify again
+      _updateRow(S.TIME_CAPSULES, 'id', c.id, { is_unlocked: true });
+    }
+  });
+
+  return results;
 }

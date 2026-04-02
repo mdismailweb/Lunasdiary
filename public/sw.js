@@ -86,3 +86,59 @@ self.addEventListener('fetch', (event) => {
         })
     );
 });
+
+
+// --- Periodic Background Sync ------------------------------
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'content-check') {
+    console.log('[SW] Periodic sync triggered');
+    event.waitUntil(checkNewContentAndNotify());
+  }
+});
+
+async function checkNewContentAndNotify() {
+  try {
+    // Note: We can't use our api.js here directly because it imports React/etc.
+    // We'll perform a direct fetch to the Apps Script URL.
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzoHZ9nmIEg_-DRt4LplZGYOKM2gs_egcUlGZlb9BB_MywXlNrlcHXRNkt0ZBqYjleZ/exec';
+    
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'checkNewContent', params: { lastCheck: Date.now() - 900000 } })
+    });
+    
+    const json = await response.json();
+    if (json.success && json.data && json.data.length > 0) {
+      for (const item of json.data) {
+        self.registration.showNotification(item.title, {
+          body: item.message,
+          icon: '/favicon.svg', // Default icon
+          badge: '/favicon.svg',
+          data: item.data,
+          vibrate: [200, 100, 200]
+        });
+      }
+    }
+  } catch (err) {
+    console.error('[SW] Sync Error:', err);
+  }
+}
+
+// --- Notification Click ------------------------------------
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      if (clientList.length > 0) {
+        let client = clientList[0];
+        for (let c of clientList) {
+          if (c.focused) client = c;
+        }
+        return client.focus();
+      }
+      return clients.openWindow('/');
+    })
+  );
+});
+

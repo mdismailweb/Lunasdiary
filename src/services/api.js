@@ -180,6 +180,12 @@ export const saveDelegationItem = (params) => _call('saveDelegationItem', params
 export const deleteDelegationItem = (id) => _call('deleteDelegationItem', { id });
 export const updateDelegationRank = (id, rank) => _call('updateDelegationRank', { id, rank });
 
+// ─── Notifications ───────────────────────────────────────────
+export const getNotifications = () => _call('getNotifications');
+export const saveNotification = (params) => _call('saveNotification', params);
+export const deleteNotification = (id) => _call('deleteNotification', { id });
+export const checkNewContent = (lastCheck) => _call('checkNewContent', { lastCheck });
+
 
 
 // ─── Helper: file → base64 ───────────────────────────────────

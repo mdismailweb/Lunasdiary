@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useJournal } from '../../hooks/useJournal';
 import { SkeletonCard } from '../Shared/Skeleton';
 import MediaRow from '../Shared/MediaRow';
+import JournalCalendar from './JournalCalendar';
 import * as api from '../../services/api';
 
 const MOODS = ['😊', '😌', '😐', '😰', '😔', '🤩', '😤', '🥱'];
@@ -16,8 +17,9 @@ export default function JournalPage() {
     const [mediaItems, setMediaItems] = useState({ audio: [], images: [], files: [] });
     const autoSaveTimer = useRef(null);
 
-    // Mobile view management: 'list' or 'editor'
-    const [mobileView, setMobileView] = useState('list');
+    // View management: 'list' or 'calendar'
+    const [viewMode, setViewMode] = useState('list');
+    const [mobileView, setMobileView] = useState('list'); // 'list' or 'editor'
     const isMobile = window.innerWidth <= 768;
 
     // Open the most recent entry, or a blank new one
@@ -26,8 +28,16 @@ export default function JournalPage() {
     }, [entries]);
 
     const openEntry = (entry) => {
+        // If entry is null, reset the draft
+        if (!entry) {
+            setActive(null);
+            setDraft({});
+            return;
+        }
+
         setActive(entry);
         setDraft({
+            entry_id: entry.entry_id,
             text_content: entry.text_content || '',
             mood: entry.mood || '',
             energy_level: entry.energy_level || 5,
@@ -57,8 +67,11 @@ export default function JournalPage() {
         }
     };
 
-    const newEntry = async () => {
-        const entry = await create({ status: 'draft' });
+    const newEntry = async (dateOverride = null) => {
+        const entry = await create({ 
+            status: 'draft',
+            date: dateOverride || new Date().toISOString().split('T')[0]
+        });
         openEntry(entry);
     };
 
@@ -151,7 +164,6 @@ export default function JournalPage() {
             const newDraft = { ...currentDraft };
             let typeKey = '';
 
-            // Helper to clean and filter reference strings
             const removeIdFromRef = (refStr) => {
                 if (!refStr) return '';
                 return refStr.split(',')
@@ -160,7 +172,6 @@ export default function JournalPage() {
                     .join(',');
             };
 
-            // Check each possible media reference field
             const imgRefs = removeIdFromRef(currentDraft.image_refs);
             if (imgRefs !== (currentDraft.image_refs || '')) {
                 newDraft.image_refs = imgRefs;
@@ -184,13 +195,11 @@ export default function JournalPage() {
                 return currentDraft;
             }
 
-            // Immediately update the local media list too
             setMediaItems(prev => ({
                 ...prev,
                 [typeKey]: prev[typeKey].filter(m => String(m.media_id).trim() !== idStr)
             }));
 
-            // Trigger an autosave for the new draft state
             setSavedAt('Saving removal...');
             clearTimeout(autoSaveTimer.current);
             autoSaveTimer.current = setTimeout(() => doSave(newDraft), 1000);
@@ -208,35 +217,78 @@ export default function JournalPage() {
     );
 
     const wc = draft.text_content ? draft.text_content.trim().split(/\s+/).filter(Boolean).length : 0;
+    
+    // Determine the active date string for the calendar
+    const activeDateStr = draft.date || (active?.date ? String(active.date).substring(0, 10) : null);
 
     return (
         <div className={`journal-layout ${mobileView}-view`} style={{ height: 'calc(100vh - var(--player-h) - 0px)' }}>
+            
+            {/* ─── Mobile FAB ─── */}
+            {isMobile && mobileView === 'list' && (
+                <button className="mobile-fab" onClick={() => newEntry()}>＋</button>
+            )}
+
             {/* Left Panel */}
             {(mobileView === 'list' || !isMobile) && (
                 <div className="journal-list">
-                    <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)' }}>
-                        <button className="btn btn-primary btn-sm" style={{ width: '100%' }} onClick={newEntry}>
-                            ✏️ New Entry
-                        </button>
-                    </div>
-                    {entries.map(entry => (
-                        <div
-                            key={entry.entry_id}
-                            className={`entry-card ${active?.entry_id === entry.entry_id ? 'active' : ''}`}
-                            onClick={() => openEntry(entry)}
-                        >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span className="entry-card-date">{String(entry.date).substring(0, 10)}</span>
-                                <span className="entry-card-mood">{entry.mood === 'happy' ? '😊' : entry.mood === 'calm' ? '😌' : entry.mood === 'excited' ? '🤩' : entry.mood === 'sad' ? '😔' : entry.mood === 'anxious' ? '😰' : '😐'}</span>
-                            </div>
-                            {entry.title && <div style={{ fontSize: '0.82rem', fontWeight: 600, marginTop: 2 }}>{entry.title}</div>}
-                            <div className="entry-card-preview">{entry.text_content || 'No content'}</div>
-                            <div className="entry-card-meta">
-                                <span className="entry-card-wc">{entry.word_count || 0} words</span>
-                                {entry.status === 'draft' && <span className="badge badge-draft">DRAFT</span>}
-                            </div>
+                    {/* View Switcher */}
+                    <div className="vault-mobile-nav" style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)' }}>
+                        <div className="vault-segments">
+                            <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>📝 List</button>
+                            <button className={viewMode === 'calendar' ? 'active' : ''} onClick={() => setViewMode('calendar')}>📅 Calendar</button>
                         </div>
-                    ))}
+                    </div>
+
+                    {!isMobile && (
+                        <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)' }}>
+                            <button className="btn btn-primary btn-sm" style={{ width: '100%' }} onClick={() => newEntry()}>
+                                ✏️ New Entry
+                            </button>
+                        </div>
+                    )}
+
+                    <div className="journal-sidebar-content">
+                        {viewMode === 'list' ? (
+                            <div className="fade-in">
+                                {entries.map(entry => (
+                                    <div
+                                        key={entry.entry_id}
+                                        className={`entry-card ${active?.entry_id === entry.entry_id ? 'active' : ''}`}
+                                        onClick={() => openEntry(entry)}
+                                    >
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span className="entry-card-date">{String(entry.date).substring(0, 10)}</span>
+                                            <span className="entry-card-mood">{entry.mood === 'happy' ? '😊' : entry.mood === 'calm' ? '😌' : entry.mood === 'excited' ? '🤩' : entry.mood === 'sad' ? '😔' : entry.mood === 'anxious' ? '😰' : entry.mood || '😐'}</span>
+                                        </div>
+                                        {entry.title && <div className="entry-card-title">{entry.title}</div>}
+                                        <div className="entry-card-preview">{entry.text_content || 'No content'}</div>
+                                        <div className="entry-card-meta">
+                                            <span className="entry-card-wc">{entry.word_count || 0} words</span>
+                                            {entry.status === 'draft' && <span className="badge badge-draft">DRAFT</span>}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="cal-sidebar-wrap fade-in">
+                                <JournalCalendar 
+                                    entries={entries} 
+                                    activeDate={activeDateStr}
+                                    onSelect={(date, entry) => {
+                                        if (entry) openEntry(entry);
+                                        else newEntry(date);
+                                    }}
+                                />
+                                <div className="cal-legend">
+                                    <p style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ fontSize: '1.2rem' }}>💡</span>
+                                        Select a day to write or review.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -246,38 +298,36 @@ export default function JournalPage() {
                     {!active ? (
                         <div className="empty-state">
                             <div className="empty-emoji">📖</div>
-                            <p>Your story starts today</p>
-                            <button className="btn btn-primary" onClick={newEntry}>Start Writing ✏️</button>
+                            <p>Select an entry to read or create a new one.</p>
+                            <button className="btn btn-primary" onClick={() => newEntry()}>Start Writing ✏️</button>
                         </div>
                     ) : (
-                        <>
+                        <div className="journal-editor-scroll">
                             {/* Top bar */}
                             <div className="editor-topbar">
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%' }}>
+                                <div className="editor-header-main">
                                     {isMobile && (
                                         <button className="btn btn-ghost btn-sm" onClick={() => setMobileView('list')}>
                                             ⬅️ Back
                                         </button>
                                     )}
-                                    <div className="field-group" style={{ flex: 1 }}>
-                                        <label className="field-label">Title</label>
-                                        <input className="field-input" placeholder="Untitled Entry" value={draft.title || ''} onChange={e => onChange('title', e.target.value)} />
-                                    </div>
+                                    <input className="field-input editor-title-input" placeholder="Untitled Entry" 
+                                        value={draft.title || ''} onChange={e => onChange('title', e.target.value)} />
                                 </div>
 
-                                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                                    <div className="field-group" style={{ flex: 1, minWidth: '120px' }}>
+                                <div className="editor-meta-row">
+                                    <div className="field-group">
                                         <label className="field-label">Date</label>
                                         <input type="date" className="field-input" value={draft.date || ''} onChange={e => onChange('date', e.target.value)} />
                                     </div>
-                                    <div className="field-group" style={{ flex: 1, minWidth: '120px' }}>
+                                    <div className="field-group" style={{ flex: 1 }}>
                                         <label className="field-label">Location</label>
                                         <input className="field-input" placeholder="Where are you?" value={draft.location || ''} onChange={e => onChange('location', e.target.value)} />
                                     </div>
                                 </div>
 
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
-                                    <div className="field-group">
+                                <div className="editor-mood-row">
+                                    <div className="field-group" style={{ flex: 1 }}>
                                         <label className="field-label">Mood</label>
                                         <div className="mood-row">
                                             {MOODS.map(m => (
@@ -285,40 +335,41 @@ export default function JournalPage() {
                                             ))}
                                         </div>
                                     </div>
-                                    <div className="field-group" style={{ width: '150px' }}>
+                                    <div className="field-group energy-field">
                                         <label className="field-label">Energy {draft.energy_level}/10</label>
                                         <input type="range" min="1" max="10" className="volume-slider" style={{ width: '100%' }}
                                             value={draft.energy_level || 5} onChange={e => onChange('energy_level', e.target.value)} />
                                     </div>
                                 </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
+                                <div className="editor-actions-bar">
                                     <span className={`autosave-label ${savingMedia ? 'pulse' : ''}`} style={{ color: savingMedia ? 'var(--primary)' : '', fontSize: '0.75rem' }}>
                                         {savedAt}
                                     </span>
-                                    <button className="btn btn-ghost btn-sm" onClick={handleDelete} title="Delete this entry" style={{ color: '#ef4444', marginLeft: 'auto' }}>
+                                    <button className="btn btn-ghost btn-sm" onClick={handleDelete} title="Delete" style={{ color: '#ef4444', marginLeft: 'auto' }}>
                                         🗑️ Delete
                                     </button>
                                 </div>
                             </div>
 
                             {/* Tags */}
-                            <div className="tags-row" style={{ margin: '0.75rem 0' }}>
+                            <div className="tags-row">
                                 {(draft.tags || []).map(t => (
                                     <span key={t} className="pill">{t}<span className="pill-remove" onClick={() => removeTag(t)}>✕</span></span>
                                 ))}
-                                <input className="field-input" style={{ width: 130, padding: '0.25rem 0.5rem' }}
-                                    placeholder="Add tag..." onKeyDown={addTag} />
+                                <input className="field-input tag-input" placeholder="＋ tag" onKeyDown={addTag} />
                             </div>
 
                             {/* Text area */}
-                            <textarea
-                                className="journal-textarea"
-                                placeholder="What's on your mind today..."
-                                value={draft.text_content || ''}
-                                onChange={e => onChange('text_content', e.target.value)}
-                            />
-                            <div className="word-count">{wc} words</div>
+                            <div className="textarea-container">
+                                <textarea
+                                    className="journal-textarea"
+                                    placeholder="Write your heart out..."
+                                    value={draft.text_content || ''}
+                                    onChange={e => onChange('text_content', e.target.value)}
+                                />
+                                <div className="word-count">{wc} words</div>
+                            </div>
 
                             {/* Media row */}
                             <MediaRow 
@@ -328,7 +379,7 @@ export default function JournalPage() {
                                 onRecord={f => uploadMedia(f, 'audio')}
                                 onRemove={handleRemoveMedia}
                             />
-                        </>
+                        </div>
                     )}
                 </div>
             )}

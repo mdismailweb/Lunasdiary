@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMedia } from '../../hooks/useMedia';
 import Lightbox from '../Shared/Lightbox';
+import SmartThumbnail from '../Shared/SmartThumbnail';
 import { SkeletonCard } from '../Shared/Skeleton';
 
 const TYPE_ICONS = { audio: '🔊', image: '🖼️', file: '📎', video: '🎬' };
@@ -81,9 +82,10 @@ export default function MediaLibraryPage() {
                             <div className="media-lib-grid">
                                 {images.map((item, i) => (
                                     <div key={item.media_id} className="media-lib-card" onClick={() => setLb(i)}>
-                                        <div className="media-lib-thumb">
-                                            <img src={item.thumbnail_link || item.drive_link} alt={item.filename} />
-                                        </div>
+                                        <SmartThumbnail 
+                                            item={item} 
+                                            className="media-lib-thumb"
+                                        />
                                         <div className="media-lib-info">
                                             <div className="media-lib-name">{item.display_name || item.filename}</div>
                                             <div className="media-lib-meta">
@@ -138,7 +140,7 @@ export default function MediaLibraryPage() {
 
             {lb !== null && (
                 <Lightbox
-                    images={images.map(i => ({ url: i.drive_link }))}
+                    images={images}
                     startIndex={lb}
                     onClose={() => setLb(null)}
                 />
