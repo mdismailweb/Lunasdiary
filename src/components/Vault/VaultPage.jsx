@@ -94,8 +94,25 @@ function VaultPage() {
 
     useEffect(() => {
         getVaultFolders()
-            .then(res => setFolders(res.data?.folders || []))
-            .catch(() => { })
+            .then(res => {
+                const folderList = res.data?.folders || [];
+                setFolders(folderList);
+                // Cache folders to localStorage for offline access
+                localStorage.setItem('vault_folders_cache', JSON.stringify({
+                    folders: folderList,
+                    cachedAt: Date.now()
+                }));
+            })
+            .catch(() => {
+                // Offline: load from cache
+                const cached = localStorage.getItem('vault_folders_cache');
+                if (cached) {
+                    try {
+                        const { folders: cachedFolders } = JSON.parse(cached);
+                        setFolders(cachedFolders);
+                    } catch (e) { console.warn('Cache error:', e); }
+                }
+            })
             .finally(() => setLoadingFolders(false));
     }, []);
 

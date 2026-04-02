@@ -24,6 +24,7 @@ import DelegationPage from './components/Delegation/DelegationPage';
 import NotificationsPage from './components/Notifications/NotificationsPage';
 import * as api from './services/api';
 import { Preloader } from './services/preloader';
+import { OfflineCache } from './services/offlineCache';
 
 export default function App() {
     const [tab, setTab] = useState(() => localStorage.getItem('luna_active_tab') || 'dashboard');
@@ -41,14 +42,23 @@ export default function App() {
     };
 
     useEffect(() => {
-        const handleOnline = () => setIsOffline(false);
+        const handleOnline = () => {
+            setIsOffline(false);
+            // Trigger background cache sync when coming online
+            OfflineCache.triggerSync();
+        };
 
         const handleOffline = () => setIsOffline(true);
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
+        
+        // Initialize offline cache monitoring
+        const cleanupCache = OfflineCache.init();
+        
         return () => {
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
+            cleanupCache?.();
         };
     }, []);
 
