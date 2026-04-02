@@ -34,7 +34,7 @@ export default function AppShell({ activeTab, onNavigate, userName, isOffline, p
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            Caching Vault
+                            Syncing: {preload.status || 'Vault'}
                         </span>
                         <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace' }}>
                             {preload.current} / {preload.total} items
@@ -59,7 +59,7 @@ export default function AppShell({ activeTab, onNavigate, userName, isOffline, p
                     userName={userName} 
                     isOffline={isOffline} 
                     onPreload={onPreload}
-                    isPreloading={preload?.active}
+                    preload={preload}
                     isOpen={isMenuOpen}
                     onClose={() => setIsMenuOpen(false)}
                 />

@@ -30,13 +30,13 @@ export default function App() {
     const [userName, setUserName] = useState('');
     const [theme, setTheme] = useState('dark');
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
-    const [preload, setPreload] = useState({ active: false, current: 0, total: 0 });
+    const [preload, setPreload] = useState({ active: false, current: 0, total: 0, status: '' });
 
     const triggerPreload = () => {
         if (preload.active) return;
         setPreload({ active: true, current: 0, total: 0 });
-        Preloader.start((current, total) => {
-            setPreload({ active: current < total, current, total });
+        Preloader.start((current, total, status) => {
+            setPreload({ active: current < total, current, total, status });
         });
     };
 

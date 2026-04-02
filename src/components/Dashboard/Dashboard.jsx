@@ -51,12 +51,15 @@ export default function Dashboard({ onNavigate }) {
     const cfg = stats?.config || {};
 
     return (
-        <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="fade-in dashboard-container">
             {/* Greeting */}
-            <div>
-                <div className="greeting-h1">{greeting(cfg.user_name || 'Friend')}</div>
-                <div className="greeting-date">{todayDate()}</div>
-                <div className="daily-prompt">"{dailyPrompt()}"</div>
+            <div className="dashboard-header">
+                <img src="/profile.jpg" alt="Profile" className="dashboard-avatar" />
+                <div>
+                    <div className="greeting-h1">{greeting(cfg.user_name || 'Friend')}</div>
+                    <div className="greeting-date">{todayDate()}</div>
+                    <div className="daily-prompt">"{dailyPrompt()}"</div>
+                </div>
             </div>
 
             {/* Stats */}
@@ -94,13 +97,13 @@ export default function Dashboard({ onNavigate }) {
             <ToBeViewedVideos onNavigate={onNavigate} />
 
             {/* Weekly Strip + Activity Summary */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: '1.5rem', alignItems: 'flex-start' }}>
+            <div className="dashboard-footer-section">
+                <div className="dashboard-footer-layout">
                     <div>
                         <div className="section-title">This Week</div>
                         <WeeklyStrip days={stats?.weekly_strip || []} />
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '300px' }}>
+                    <div className="dashboard-activity-side">
                         <DashboardActivityGraph
                             title="Streak activity"
                             activity={stats?.streak_activity || []}

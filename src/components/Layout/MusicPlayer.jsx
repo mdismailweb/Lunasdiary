@@ -58,7 +58,7 @@ export default function MusicPlayer() {
             height: '1', width: '1',
             videoId,
             playerVars: {
-                autoplay: 1, controls: 0, loop: 1,
+                autoplay: 0, controls: 0, loop: 1,
                 playlist: videoId, rel: 0, modestbranding: 1,
                 playsinline: 1,
                 mute: 1 // ← muted autoplay is ALWAYS allowed by browsers
@@ -67,8 +67,8 @@ export default function MusicPlayer() {
                 onReady: (e) => {
                     // Start muted (browser always allows muted autoplay) then unmute on first interaction
                     e.target.mute();
-                    e.target.setVolume(0);
-                    e.target.playVideo();
+                    e.target.setVolume(Math.round(volume * 100));
+                    // e.target.playVideo(); // Removed auto-play
                     // setPlaying driven by onStateChange only
                     
                     // Unmute as soon as user taps anywhere
@@ -133,27 +133,7 @@ export default function MusicPlayer() {
         audio.volume = volume;
         registerMusic(audio);
 
-        const tryAutoplay = () => {
-            if (STATIONS[0].id === 'ambience') {
-                // YT player starts muted and unmutes on first tap (handled in onReady)
-                createYTPlayer(pickRandom());
-            } else {
-                // For html5 audio, start muted and unmute on first interaction
-                audio.src = STATIONS[0].url;
-                audio.muted = true;
-                audio.play().catch(() => { });
-                const onFirstInteraction = () => {
-                    audio.muted = false;
-                    audio.volume = volume;
-                    document.removeEventListener('click', onFirstInteraction);
-                    document.removeEventListener('touchstart', onFirstInteraction);
-                };
-                document.addEventListener('click', onFirstInteraction);
-                document.addEventListener('touchstart', onFirstInteraction, { passive: true });
-            }
-        };
-
-        tryAutoplay();
+        // Autoplay removed as per user request
 
         // Setup Media Session API for background controls
         if ('mediaSession' in navigator) {
@@ -177,6 +157,13 @@ export default function MusicPlayer() {
             catch (_) { }
         }
     }, [volume, muted, station.id]);
+
+    // Background Play Fix: Sync state to MediaSession
+    useEffect(() => {
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
+        }
+    }, [playing]);
 
     // ── Controls ──────────────────────────────────────────────
     const togglePlay = () => {
@@ -292,7 +279,7 @@ export default function MusicPlayer() {
     // ── Render ────────────────────────────────────────────────
     return (
         <div className="music-player">
-            <audio ref={audioRef} />
+            <audio ref={audioRef} playsInline />
             <div ref={ytDivRef} style={{ position: 'fixed', left: '-9999px', bottom: 0, width: '1px', height: '1px', pointerEvents: 'none' }} />
 
             {/* Station picker */}

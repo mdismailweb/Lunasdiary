@@ -127,11 +127,50 @@ select {
   margin-bottom: 0.75rem;
 }
 
+.app-logo-img {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 0.5rem;
+  border: 2px solid var(--accent);
+}
+
 .sidebar-logo h1 {
   font-size: 1.2rem;
   font-weight: 700;
   color: var(--accent);
   letter-spacing: -0.5px;
+}
+
+.user-profile-stack {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-avatar-xs {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.dashboard-avatar {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--accent);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
 }
 
 .sidebar-logo p {
@@ -212,6 +251,24 @@ select {
   font-size: 0.8rem;
   color: var(--text-muted);
   font-weight: 500;
+}
+
+.sync-btn {
+  margin: 0.75rem 1rem 1.5rem;
+  padding: 0.75rem 1.25rem;
+  width: calc(100% - 2rem);
+  background: var(--surface2);
+  border: 1px solid rgba(167, 139, 250, 0.2);
+  border-radius: 12px;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: all var(--transition);
+  box-shadow: var(--shadow-sm);
 }
 
 .settings-btn {
@@ -790,6 +847,33 @@ textarea.field-input {
   background: var(--accent);
 }
 
+/* ── Dashboard Layout ─────────────────────────────────────── */
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.dashboard-footer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dashboard-footer-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.dashboard-activity-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 300px;
+}
+
 /* ── Stats Cards ──────────────────────────────────────────── */
 .stats-row {
   display: grid;
@@ -927,12 +1011,52 @@ textarea.field-input {
   animation: toast-out 0.3s ease forwards;
 }
 
-/* ── Skeleton ─────────────────────────────────────────────── */
+/* ── Skeleton Loading ───────────────────────────────────── */
 .skeleton {
-  border-radius: var(--radius-sm);
-  background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+  background: var(--surface2);
+  background: linear-gradient(90deg,
+      var(--surface2) 25%,
+      rgba(255, 255, 255, 0.05) 50%,
+      var(--surface2) 75%);
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* -- Media Removal Buttons ---------------------------------- */
+.media-remove-btn {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--danger);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  z-index: 10;
+  opacity: 0.6;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.media-remove-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
 }
 
 /* ── Empty State ──────────────────────────────────────────── */
@@ -2646,29 +2770,6 @@ textarea.field-input {
 /* ── Skeleton Loading ───────────────────────────────────── */
 .skeleton {
   background: var(--surface2);
-  background: linear-gradient(90deg,
-      var(--surface2) 25%,
-      rgba(255, 255, 255, 0.05) 50%,
-      var(--surface2) 75%);
-  background-size: 200% 100%;
-  animation: skeleton-loading 1.5s infinite;
-}
-
-@keyframes skeleton-loading {
-  0% {
-    background-position: 200% 0;
-  }
-
-  100% {
-    background-position: -200% 0;
-  }
-}
-/* -- Media Removal Buttons ---------------------------------- */
-.media-remove-btn {
-    position: absolute;
-    top: 4px;
-    left: 4px; /* Move to left to not clash with View link */
-    width: 20px;
     height: 20px;
     border-radius: 50%;
     background: var(--danger);

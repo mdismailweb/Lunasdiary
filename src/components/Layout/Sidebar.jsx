@@ -23,7 +23,7 @@ const TABS = [
     { id: 'notifications', icon: '🔔', label: 'Notifications' },
 ];
 
-export default function Sidebar({ active, onNavigate, userName, isOffline, onPreload, isPreloading, isOpen, onClose }) {
+export default function Sidebar({ active, onNavigate, userName, isOffline, onPreload, preload, isOpen, onClose }) {
     return (
         <>
             {/* Mobile Drawer Overlay */}
@@ -31,28 +31,29 @@ export default function Sidebar({ active, onNavigate, userName, isOffline, onPre
 
             <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
 
+            <div className="sidebar-logo">
+                <div className="logo-flex">
+                    <img src="/profile.jpg" alt="Logo" className="app-logo-img" />
+                    <div className="logo-text">
+                        <h1>Luna's Notes</h1>
+                        <p>Your private sanctuary</p>
+                    </div>
+                </div>
+            </div>
+
             <button 
-                className={`sync-btn ${isPreloading ? 'syncing' : ''}`}
+                className={`sync-btn ${preload?.active ? 'syncing' : ''}`}
                 onClick={onPreload}
-                disabled={isPreloading || isOffline}
+                disabled={preload?.active || isOffline}
                 title="Shuffle & Preload Vault for Offline Use"
             >
                 <span className="sync-icon">🔄</span>
-                <span>{isPreloading ? 'Syncing...' : 'Sync Vault'}</span>
+                <span>
+                    {preload?.active 
+                        ? `Syncing ${preload.current}/${preload.total || 500}...` 
+                        : 'Sync Vault'}
+                </span>
             </button>
-
-            <div className="sidebar-logo">
-
-                <h1>🌙 Luna's Notes</h1>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <p>Your private sanctuary</p>
-                    {isOffline && (
-                        <span className="badge badge-draft" style={{ fontSize: '0.6rem', padding: '2px 6px', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                            ☁️ Offline
-                        </span>
-                    )}
-                </div>
-            </div>
 
             <nav className="sidebar-nav">
                 {TABS.map(tab => (
@@ -71,7 +72,10 @@ export default function Sidebar({ active, onNavigate, userName, isOffline, onPre
             </nav>
 
             <div className="sidebar-footer">
-                <span className="user-name">👤 {userName || 'You'}</span>
+                <div className="user-profile-stack">
+                    <img src="/profile.jpg" alt="Profile" className="profile-avatar-xs" />
+                    <span className="user-name">{userName || 'You'}</span>
+                </div>
                 <button className="settings-btn" title="Settings">⚙️</button>
             </div>
         </aside>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import * as api from '../../services/api';
+import { Bell, RefreshCw } from 'lucide-react';
 import './Notifications.css';
 
 export default function NotificationsPage() {
@@ -7,6 +8,7 @@ export default function NotificationsPage() {
     const [loading, setLoading] = useState(true);
     const [permissionStatus, setPermissionStatus] = useState(Notification.permission);
     const [isSyncRegistered, setIsSyncRegistered] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
 
     useEffect(() => {
         loadNotifications();
@@ -44,13 +46,20 @@ export default function NotificationsPage() {
     const registerPeriodicSync = async () => {
         if ('serviceWorker' in navigator && 'periodicSync' in registration) {
             try {
+                setIsSyncing(true);
                 const registration = await navigator.serviceWorker.ready;
                 await registration.periodicSync.register('content-check', {
-                    minInterval: 15 * 60 * 1000, // 15 minutes
+                    minInterval: 15 * 60 * 1000, 
                 });
-                setIsSyncRegistered(true);
-                alert('Background Sync Enabled! Checking every 15 mins.');
+                
+                // Keep spinning for 1s for visual feedback
+                setTimeout(() => {
+                    setIsSyncRegistered(true);
+                    setIsSyncing(false);
+                    alert('Background Sync Enabled! Checking every 15 mins.');
+                }, 1000);
             } catch (err) {
+                setIsSyncing(false);
                 console.error('Periodic background sync failed:', err);
             }
         } else {
@@ -104,9 +113,19 @@ export default function NotificationsPage() {
                         </button>
                     ) : (
                         <div className="action-row">
-                            <button className="secondary-btn" onClick={testNotification}>Test Alert</button>
+                            <button className="btn-test-alert" onClick={testNotification}>
+                                <Bell size={18} />
+                                <span>Test Alert</span>
+                            </button>
                             {!isSyncRegistered && (
-                                <button className="accent-btn" onClick={registerPeriodicSync}>Force Sync Start</button>
+                                <button 
+                                    className={`btn-force-sync ${isSyncing ? 'syncing' : ''}`} 
+                                    onClick={registerPeriodicSync}
+                                    disabled={isSyncing}
+                                >
+                                    <RefreshCw size={18} className={isSyncing ? 'spin' : ''} />
+                                    <span>{isSyncing ? 'Syncing...' : 'Force Sync Start'}</span>
+                                </button>
                             )}
                         </div>
                     )}

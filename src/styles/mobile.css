@@ -26,6 +26,14 @@
     gap: 10px;
   }
 
+  .mobile-logo-img {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1.5px solid var(--accent);
+  }
+
   .mobile-header-title {
     font-size: 1rem;
     font-weight: 800;
@@ -49,17 +57,12 @@
     font-weight: 700;
   }
 
-  .mobile-user-avatar {
+  .mobile-user-avatar-img {
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: var(--accent);
-    color: #1a1a2e;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 900;
-    font-size: 0.8rem;
+    object-fit: cover;
+    border: 1.5px solid var(--accent);
     box-shadow: 0 0 15px rgba(232, 160, 69, 0.3);
   }
 
@@ -381,8 +384,42 @@ video.lightbox-img {
   }
 
   /* ── Dashboard Stacking ───────────────────────────── */
+  .greeting-h1 {
+    font-size: 1.5rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .greeting-date {
+    font-size: 0.8rem !important;
+  }
+
+  .daily-prompt {
+    font-size: 0.85rem !important;
+    margin-top: 0.5rem !important;
+    padding: 0.75rem !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-radius: 8px !important;
+  }
+
+  .dashboard-footer-layout {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+  }
+
+  .dashboard-activity-side {
+    width: 100% !important;
+  }
+
   .stat-card {
     padding: 1rem !important;
+  }
+
+  .stat-value {
+    font-size: 1.25rem !important;
+  }
+
+  .stat-label {
+    font-size: 0.65rem !important;
   }
 
   /* ── Videos & Twitch ──────────────────────────────── */

@@ -7,13 +7,13 @@ export default function MobileHeader({ userName, isOffline }) {
     return (
         <header className="mobile-header">
             <div className="mobile-header-branding">
-                <span className="mobile-header-logo">🌙</span>
+                <img src="/profile.jpg?v=2" alt="Logo" className="mobile-logo-img" />
                 <span className="mobile-header-title">Luna's Notes</span>
             </div>
             
             <div className="mobile-header-status">
                 {isOffline && <span className="status-badge offline">☁️ Offline</span>}
-                <div className="mobile-user-avatar">{userName?.charAt(0) || 'U'}</div>
+                <img src="/profile.jpg?v=2" alt="User" className="mobile-user-avatar-img" />
             </div>
         </header>
     );

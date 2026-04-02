@@ -271,10 +271,29 @@ export default function GooglePhotos({ activeTab, folders, onTabChange }) {
     const [scannedGroups, setScannedGroups] = useState([]);
 
 
-    // Load liked images from Sheets on mount
+    // Load liked images from Sheets on mount + Instant Loading Cache
     useEffect(() => {
+        // 1. Instant Loading from Cache
+        const cached = localStorage.getItem('luna_vault_liked_cache');
+        if (cached) {
+            try {
+                const parsed = JSON.parse(cached);
+                setLiked(parsed.items || []);
+                setInitLoading(false);
+            } catch (e) { }
+        }
+
+        // 2. Refresh from Sheets
         getLikedImages()
-            .then(res => setLiked(res.data?.liked || []))
+            .then(res => {
+                const items = res.data?.liked || res.liked || [];
+                setLiked(items);
+                // Background update the cache
+                localStorage.setItem('luna_vault_liked_cache', JSON.stringify({
+                    items: items,
+                    updatedAt: Date.now()
+                }));
+            })
             .catch(() => { })
             .finally(() => setInitLoading(false));
     }, []);

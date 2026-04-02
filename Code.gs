@@ -596,6 +596,22 @@ function initializeApp() {
     });
   }
 
+  // ── Pre-seed Notifications if empty ──
+  var notifSheet = ss.getSheetByName(S.NOTIFICATIONS);
+  if (notifSheet && notifSheet.getLastRow() < 2) {
+    var presets = [
+      { id: 'notif-001', label: 'Morning Reflection', time: '08:00', days: 'Mon,Tue,Wed,Thu,Fri,Sat,Sun', message: 'Time to start the day with a quick reflection.', enabled: true, type: 'SCHEDULED' },
+      { id: 'notif-002', label: 'Evening Journal', time: '21:00', days: 'Mon,Tue,Wed,Thu,Fri,Sat,Sun', message: 'Evening is here. Let\'s record today\'s highlights.', enabled: true, type: 'SCHEDULED' },
+      { id: 'notif-003', label: 'Video Alert', time: '', days: '', message: 'New content from your favorite channels!', enabled: true, type: 'SYNC_YT' },
+      { id: 'notif-004', label: 'Live Stream Alert', time: '', days: '', message: 'A streamer just went live!', enabled: true, type: 'SYNC_TWITCH' },
+      { id: 'notif-005', label: 'Memory Unlocked', time: '', days: '', message: 'A special memory is waiting for you.', enabled: true, type: 'SYNC_CAPSULE' }
+    ];
+    presets.forEach(function(p) {
+      p.updatedAt = _now();
+      _appendRow(S.NOTIFICATIONS, p);
+    });
+  }
+
   return { message: 'App initialized', sheets_created: created };
 }
 
@@ -2406,10 +2422,18 @@ function getMediaThumbnailBase64(params) {
 // ---------------------------------------------------------------
 
 function getNotifications() {
+  var sheet = _ss().getSheetByName(S.NOTIFICATIONS);
+  if (!sheet) {
+    initializeApp();
+  }
   return _sheetToObjects(S.NOTIFICATIONS);
 }
 
 function saveNotification(params) {
+  var sheet = _ss().getSheetByName(S.NOTIFICATIONS);
+  if (!sheet) {
+    initializeApp();
+  }
   var id = params.id || 'notif-' + Date.now();
   var item = {
     id: id,
