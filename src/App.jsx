@@ -25,6 +25,7 @@ import NotificationsPage from './components/Notifications/NotificationsPage';
 import * as api from './services/api';
 import { Preloader } from './services/preloader';
 import { OfflineCache } from './services/offlineCache';
+import OfflineCacheBadge from './components/OfflineCacheBadge';
 
 export default function App() {
     const [tab, setTab] = useState(() => localStorage.getItem('luna_active_tab') || 'dashboard');
@@ -109,15 +110,18 @@ export default function App() {
     };
 
     return (
-        <AppShell 
-            activeTab={tab} 
-            onNavigate={navigate} 
-            userName={userName} 
-            isOffline={isOffline} 
-            preload={preload}
-            onPreload={triggerPreload}
-        >
-            {renderTab()}
-        </AppShell>
+        <>
+            <AppShell 
+                activeTab={tab} 
+                onNavigate={navigate} 
+                userName={userName} 
+                isOffline={isOffline} 
+                preload={preload}
+                onPreload={triggerPreload}
+            >
+                {renderTab()}
+            </AppShell>
+            <OfflineCacheBadge />
+        </>
     );
 }

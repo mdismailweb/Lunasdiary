@@ -212,6 +212,9 @@ export const OfflineCache = {
     async triggerSync() {
         console.log('[OfflineCache] 🔄 Starting background cache sync...');
         
+        // Dispatch start event for UI
+        window.dispatchEvent(new Event('offlinecache:start'));
+        
         // Run all caching tasks in parallel with some spacing to avoid rate limits
         const tasks = [
             cacheDashboard(),
@@ -228,6 +231,9 @@ export const OfflineCache = {
         
         await Promise.allSettled(tasks);
         console.log('[OfflineCache] ✅ Cache sync complete!');
+        
+        // Dispatch complete event for UI
+        window.dispatchEvent(new Event('offlinecache:complete'));
     },
 
     // Get cached data with TTL validation
