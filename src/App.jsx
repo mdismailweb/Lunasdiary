@@ -21,7 +21,6 @@ import WritingPage from './components/Writing/WritingPage';
 import YearlyReviewPage from './components/YearlyReview/YearlyReviewPage';
 import TwitchPage from './components/Twitch/TwitchPage';
 import DelegationPage from './components/Delegation/DelegationPage';
-import QuickCapture from './components/Dashboard/QuickCapture';
 import * as api from './services/api';
 import { Preloader } from './services/preloader';
 
@@ -107,7 +106,6 @@ export default function App() {
             onPreload={triggerPreload}
         >
             {renderTab()}
-            <QuickCapture onNavigate={navigate} />
         </AppShell>
     );
 }

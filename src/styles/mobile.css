@@ -677,15 +677,6 @@ video.lightbox-img {
   }
 }
 
-/* ── Floating Action Button Adjust ────────────────────────── */
-@media (max-width: 768px) {
-  .fab {
-    bottom: calc(85px + env(safe-area-inset-bottom)) !important;
-    right: 1.25rem !important;
-    transform: scale(0.9);
-  }
-}
-
 /* ── Music Player Mobile ──────────────────────────────────── */
 @media (max-width: 768px) {
   .music-player {
