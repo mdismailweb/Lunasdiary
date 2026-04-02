@@ -109,13 +109,35 @@ function VaultPage() {
         if (!window.confirm(`Remove "${folder?.name || 'this folder'}" from your Vault?`)) return;
         try { await removeVaultFolder(folderId); } catch { }
         setFolders(prev => prev.filter(f => f.id !== folderId));
-        if (activeTab === folderId) setActiveTab('liked');
+        if (activeTab === folderId) setActiveTab('folders_menu');
     };
+
+    const isFolderActive = folders.some(f => f.id === activeTab);
+    const activeFolder = folders.find(f => f.id === activeTab);
 
     return (
         <div className="vault-layout">
-            {/* ─── Left Sidebar / Top Nav ─── */}
-            <div className="vault-sidebar">
+            {/* ─── Mobile Segmented Control ─── */}
+            <div className={`vault-mobile-nav mobile-only ${isFolderActive ? 'hidden' : ''}`}>
+                <div className="vault-segments">
+                    <button className={activeTab === 'liked' ? 'active' : ''} onClick={() => setActiveTab('liked')}>❤️ Liked</button>
+                    <button className={activeTab === 'folders_menu' ? 'active' : ''} onClick={() => setActiveTab('folders_menu')}>🗂️ Folders</button>
+                    <button className={activeTab === 'people' ? 'active' : ''} onClick={() => setActiveTab('people')}>👥 People</button>
+                </div>
+            </div>
+
+            {/* ─── Mobile Folder Top Bar ─── */}
+            {isFolderActive && (
+                <div className="vault-mobile-folder-header mobile-only">
+                    <button className="back-btn" onClick={() => setActiveTab('folders_menu')}>
+                        ‹ Back
+                    </button>
+                    <span className="folder-title">{activeFolder?.name}</span>
+                </div>
+            )}
+
+            {/* ─── Left Sidebar (Desktop Only) ─── */}
+            <div className="vault-sidebar desktop-only">
                 <h2 className="vault-title">🔒 Vault</h2>
 
                 <div className="vault-nav-scroll">
@@ -133,7 +155,6 @@ function VaultPage() {
                         icon="👥"
                         label="People"
                     />
-
 
                     {/* Divider */}
                     {folders.length > 0 && (
@@ -172,12 +193,33 @@ function VaultPage() {
             </div>
 
             {/* ─── Content Area ─── */}
-            <div className="vault-content">
-                {activeTab === 'people' ? (
+            <div className={`vault-content ${activeTab === 'folders_menu' ? 'mobile-only' : ''}`}>
+                {activeTab === 'folders_menu' ? (
+                    <div className="mobile-folders-grid-view">
+                        <h3 className="mobile-folders-title">My Folders</h3>
+                        <div className="mobile-folders-grid">
+                            <div className="add-folder-card" onClick={() => setShowAdd(true)}>
+                                <div className="add-icon">+</div>
+                                <span>Add Folder</span>
+                            </div>
+                            {loadingFolders ? (
+                                <div className="vault-loading" style={{ gridColumn: 'span 2', textAlign: 'center', padding: '2rem' }}>Loading folders...</div>
+                            ) : (
+                                folders.map(folder => (
+                                    <div key={folder.id} className="folder-card" onClick={() => setActiveTab(folder.id)}>
+                                        <div className="folder-icon-wrapper">📁</div>
+                                        <div className="folder-name">{folder.name}</div>
+                                        <button className="folder-remove" onClick={(e) => { e.stopPropagation(); handleRemoveFolder(folder.id); }}>✕</button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                ) : activeTab === 'people' ? (
                     <PeopleView folders={folders} />
                 ) : (
                     <GooglePhotos
-                        activeTab={activeTab}
+                        activeTab={activeTab === 'folders_menu' ? 'liked' : activeTab}
                         folders={folders}
                         onTabChange={setActiveTab}
                     />
@@ -186,7 +228,6 @@ function VaultPage() {
 
             {showAdd && <AddFolderModal onAdd={handleAddFolder} onClose={() => setShowAdd(false)} />}
         </div>
-
     );
 }
 

@@ -37,33 +37,29 @@ export default function FaceGroupsView({ folderId, groups, onSave, onBack }) {
 
     return (
         <div className="fade-in">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <div>
-                    <h2 style={{ fontSize: '1.4rem', fontWeight: 700 }}>Scan Results</h2>
-                    <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>
-                        Identified {groupState.length} people/groups. Pick a cover photo and add names.
-                    </p>
-                </div>
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <button className="btn btn-ghost" onClick={onBack}>Back to Scanning</button>
-                    <button className="btn btn-primary" onClick={handleSaveAll} disabled={saving}>
-                        {saving ? 'Saving...' : '💾 Save to Sheet'}
-                    </button>
-                </div>
-            </div>
+            <div className="groups-list">
+                <style>{`
+                    .group-grid-container { flex: 1; minWidth: 300px; }
+                    .group-grid { display: flex; gap: 8px; flexWrap: wrap; }
+                    .face-thumb { position: relative; width: 80px; height: 80px; borderRadius: 8px; overflow: hidden; cursor: pointer; transition: all 0.2s; }
+                    
+                    @media (max-width: 768px) {
+                        .group-layout { flex-direction: column; gap: 1rem; }
+                        .group-sidebar { width: 100%; }
+                        .group-grid-container { min-width: 100%; }
+                        .face-thumb { width: 70px; height: 70px; }
+                        .results-header { flex-direction: column; align-items: stretch !important; gap: 1rem; }
+                        .results-header-text h2 { font-size: 1.1rem !important; }
+                        .results-header-btns { width: 100%; }
+                        .results-header-btns button { flex: 1; font-size: 0.8rem; }
+                    }
+                `}</style>
 
-            {error && (
-                <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', padding: '1rem', borderRadius: '12px', color: '#ef4444', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-                    ⚠️ {error}
-                </div>
-            )}
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 {groupState.map((group, idx) => (
-                    <div key={group.groupId} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', padding: '1.25rem' }}>
-                        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                    <div key={group.groupId} className="group-item" style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.08)', padding: '1.25rem', marginBottom: '1.5rem' }}>
+                        <div className="group-layout" style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
                             {/* Group Header/Edit */}
-                            <div style={{ width: '220px', flexShrink: 0 }}>
+                            <div className="group-sidebar" style={{ width: '220px', flexShrink: 0 }}>
                                 <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--accent)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.4rem' }}>
                                     Person Name / Label
                                 </label>
@@ -80,22 +76,21 @@ export default function FaceGroupsView({ folderId, groups, onSave, onBack }) {
                             </div>
 
                             {/* Members Grid */}
-                            <div style={{ flex: 1, minWidth: '300px' }}>
+                            <div className="group-grid-container">
                                 <label style={{ display: 'block', fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.8rem' }}>
                                     Select Cover Photo
                                 </label>
-                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                <div className="group-grid">
                                     {group._members.map(member => {
                                         const isCover = group.coverImageId === member.id;
                                         return (
                                             <div
                                                 key={member.id}
                                                 onClick={() => pickCover(idx, member.id)}
+                                                className="face-thumb"
                                                 style={{
-                                                    position: 'relative', width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer',
                                                     border: isCover ? '3px solid var(--accent, #a78bfa)' : '2px solid transparent',
-                                                    boxShadow: isCover ? '0 0 15px rgba(167,139,250,0.4)' : 'none',
-                                                    transition: 'all 0.2s'
+                                                    boxShadow: isCover ? '0 0 15px rgba(167,139,250,0.4)' : 'none'
                                                 }}
                                             >
                                                 <img

@@ -182,10 +182,32 @@ export default function FaceScanner({ folderId, images, onComplete, onCancel }) 
     };
 
     return (
-        <div style={{
-            padding: '2.5rem', background: 'var(--bg-card, #1e1e30)', borderRadius: '24px',
-            border: '1px solid rgba(255,255,255,0.1)', textAlign: 'center', maxWidth: '600px', margin: '0 auto'
-        }}>
+        <div className="face-scanner-container">
+            <style>{`
+                .face-scanner-container {
+                    padding: 2.5rem; background: var(--bg-card, #1e1e30); borderRadius: 24px;
+                    border: 1px solid rgba(255,255,255,0.1); textAlign: center; maxWidth: 600px; margin: 0 auto;
+                }
+                .scan-modes { display: flex; gap: 1rem; justifyContent: center; flexWrap: wrap; }
+                .scan-card { flex: 1; min-width: 150px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); borderRadius: 16px; padding: 1.25rem; cursor: pointer; transition: all 0.2s; }
+                .scan-card-deep { background: rgba(167,139,250,0.1) !important; border: 1px solid rgba(167,139,250,0.3) !important; }
+                
+                @media (max-width: 768px) {
+                    .face-scanner-container { padding: 1.5rem 1rem; border-radius: 16px; }
+                    .face-scanner-container h3 { font-size: 1.2rem !important; }
+                    .scan-modes { flex-direction: column; }
+                    .scan-card { min-width: 100%; padding: 1rem; display: flex; align-items: center; text-align: left; gap: 1rem; }
+                    .scan-card div:first-child { font-size: 1.2rem !important; margin-bottom: 0 !important; }
+                    .scan-card h4 { font-size: 0.85rem !important; }
+                    .scan-card p { margin-top: 0 !important; }
+                }
+                
+                @keyframes loading-slide {
+                    0% { background-position: 100% 0; }
+                    100% { background-position: -100% 0; }
+                }
+            `}</style>
+            
             <h3 style={{ marginBottom: '0.5rem', fontWeight: 800, fontSize: '1.4rem' }}>🧬 AI Face Recognition</h3>
             <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', marginBottom: '2rem', minHeight: '3em' }}>
                 {log}
@@ -207,40 +229,36 @@ export default function FaceScanner({ folderId, images, onComplete, onCancel }) 
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                         <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            {status === 'fetching' ? `Discovery Phase (${discoveryCount} found in ${batchesChecked} batches)...` :
-                                status === 'scanning' ? `Scanning Phase (${faceDetectedCount} faces detected)...` :
-                                    status === 'clustering' ? 'Grouping Phase...' : `${progress}% SCANNED`}
+                            {status === 'fetching' ? `Discovery Phase...` :
+                                status === 'scanning' ? `Scanning... (${faceDetectedCount} faces)` :
+                                    status === 'clustering' ? 'Grouping...' : `${progress}% SCANNED`}
                         </span>
-
                     </div>
-
                 </div>
             )}
 
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <div className="scan-modes">
                 {status === 'ready' && (
                     <>
-                        <div onClick={startQuickScan} style={{
-                            flex: 1, minWidth: '150px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
-                            borderRadius: '16px', padding: '1.25rem', cursor: 'pointer', transition: 'all 0.2s'
-                        }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}>
+                        <div onClick={startQuickScan} className="scan-card">
                             <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>⚡</div>
-                            <h4 style={{ margin: 0, fontSize: '0.9rem' }}>Quick Scan</h4>
-                            <p style={{ fontSize: '0.7rem', opacity: 0.5, marginTop: '0.3rem' }}>Latest {images.length} images</p>
+                            <div>
+                                <h4 style={{ margin: 0, fontSize: '0.9rem' }}>Quick Scan</h4>
+                                <p style={{ fontSize: '0.7rem', opacity: 0.5 }}>Latest {images.length} images</p>
+                            </div>
                         </div>
 
-                        <div onClick={startDeepScan} style={{
-                            flex: 1, minWidth: '150px', background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.3)',
-                            borderRadius: '16px', padding: '1.25rem', cursor: 'pointer', transition: 'all 0.2s'
-                        }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(167,139,250,0.15)'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(167,139,250,0.1)'}>
+                        <div onClick={startDeepScan} className="scan-card scan-card-deep">
                             <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🛸</div>
-                            <h4 style={{ margin: 0, fontSize: '0.9rem' }}>Deep Scan</h4>
-                            <p style={{ fontSize: '0.7rem', opacity: 0.6, marginTop: '0.3rem' }}>Whole folder (Slow)</p>
+                            <div>
+                                <h4 style={{ margin: 0, fontSize: '0.9rem' }}>Deep Scan</h4>
+                                <p style={{ fontSize: '0.7rem', opacity: 0.6 }}>Whole folder (Slow)</p>
+                            </div>
                         </div>
                     </>
                 )}
                 {status === 'complete' && (
-                    <button className="btn btn-primary" style={{ padding: '0.75rem 2.5rem' }} onClick={() => onComplete(results)}>View Results</button>
+                    <button className="btn btn-primary" style={{ flex: 1, padding: '0.75rem 0' }} onClick={() => onComplete(results)}>View Results</button>
                 )}
                 {(status === 'ready' || status === 'complete') && (
                     <button className="btn btn-ghost" style={{ width: '100%', marginTop: '0.5rem' }} onClick={onCancel}>
@@ -250,16 +268,8 @@ export default function FaceScanner({ folderId, images, onComplete, onCancel }) 
             </div>
 
             <p style={{ marginTop: '2rem', fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>
-                Powered by face-api.js. Images are never uploaded for processing.
+                Powered by face-api.js.
             </p>
-
-            <style>{`
-                @keyframes loading-slide {
-                    0% { background-position: 100% 0; }
-                    100% { background-position: -100% 0; }
-                }
-            `}</style>
-
         </div>
     );
 }

@@ -53,12 +53,25 @@ export default function PeopleView({ folders }) {
     );
 
     return (
-        <div className="fade-in">
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '1.5rem' }}>👥 People</h2>
+        <div className="fade-in people-view-container">
+            <style>{`
+                .people-view-container h2 { font-size: 1.4rem; fontWeight: 700; margin-bottom: 1.5rem; }
+                .people-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; }
+                
+                @media (max-width: 768px) {
+                    .people-view-container h2 { font-size: 1.1rem; margin-bottom: 1rem; }
+                    .people-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+                    .person-card { border-radius: 12px !important; }
+                    .person-card-info { padding: 0.75rem !important; }
+                    .person-card-name { font-size: 0.85rem !important; }
+                }
+            `}</style>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.5rem' }}>
+            <h2>👥 People</h2>
+
+            <div className="people-grid">
                 {allGroups.map((group, idx) => (
-                    <div key={idx} style={{
+                    <div key={idx} className="person-card" style={{
                         background: 'rgba(255,255,255,0.04)', borderRadius: '20px', overflow: 'hidden',
                         border: '1px solid rgba(255,255,255,0.08)', transition: 'transform 0.2s',
                         cursor: 'default'
@@ -74,8 +87,8 @@ export default function PeopleView({ folders }) {
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />
                         </div>
-                        <div style={{ padding: '1rem' }}>
-                            <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700 }}>{group.label}</h4>
+                        <div className="person-card-info" style={{ padding: '1rem' }}>
+                            <h4 className="person-card-name" style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700 }}>{group.label}</h4>
                             <p style={{ margin: '0.2rem 0 0', fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                 Found in {group.folderName}
                             </p>

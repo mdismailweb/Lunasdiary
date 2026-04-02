@@ -57,7 +57,7 @@ function VaultLightbox({ items, index, onClose, likedIds, onLike }) {
             const now = Date.now();
             if (now - lastTap.current < 300) {
                 setScale(s => s > 1 ? 1 : 2.5);
-                setTranslate({x: 0, y: 0});
+                setTranslate({ x: 0, y: 0 });
             }
             lastTap.current = now;
             setDragging(true);
@@ -124,7 +124,7 @@ function VaultLightbox({ items, index, onClose, likedIds, onLike }) {
                         {item.title}
                     </div>
                 )}
-                
+
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
                     {onLike && (
                         <button onClick={(e) => { e.stopPropagation(); onLike(item); }}
@@ -153,7 +153,7 @@ function VaultLightbox({ items, index, onClose, likedIds, onLike }) {
                 onTouchEnd={isVideo ? undefined : onTouchEnd}
                 onContextMenu={e => e.preventDefault()}
                 style={{ cursor: isVideo ? 'default' : (dragging ? 'grabbing' : (scale > 1 ? 'zoom-out' : 'zoom-in')) }}>
-                
+
                 {isVideo ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', width: '100%' }}>
                         <div style={{ position: 'relative', width: 'min(90vw, 960px)', height: 'min(70vh, 540px)' }}>
@@ -314,8 +314,8 @@ export default function GooglePhotos({ activeTab, folders, onTabChange }) {
 
         // Only show skeleton if we have literally zero items (even from cache)
         const hasNoData = currentData.items.length === 0 && !localStorage.getItem(cacheKey);
-        if (hasNoData || isLoadMore) setLoading(true); 
-        
+        if (hasNoData || isLoadMore) setLoading(true);
+
         setError(null);
 
         try {
