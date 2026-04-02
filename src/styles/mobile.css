@@ -718,4 +718,162 @@ video.lightbox-img {
   .content-area {
     padding-bottom: calc(65px + 48px + env(safe-area-inset-bottom) + 30px) !important;
   }
+
+  /* ── Videos & Twitch Mobile Overwrites ────────────────────── */
+  .videos-sidebar {
+    display: none !important;
+  }
+
+  .videos-feed {
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Mobile Channel Horizontal Strip */
+  .mobile-channel-strip {
+    display: flex;
+    overflow-x: auto;
+    gap: 12px;
+    padding: 2px 0 1.25rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mobile-channel-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .strip-item {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+    width: 60px;
+    opacity: 0.6;
+    transition: all 0.2s;
+  }
+
+  .strip-item.active {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+
+  .strip-avatar, .strip-avatar-all {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+  }
+
+  .strip-item.active .strip-avatar {
+    border-color: var(--accent);
+    box-shadow: 0 0 15px rgba(232, 160, 69, 0.3);
+  }
+
+  .strip-item span {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: white;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Mobile Channel Management Grid */
+  .mobile-channel-list-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .mobile-channel-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 1.5rem 0.75rem;
+    border-radius: 16px;
+    position: relative;
+    text-align: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .mobile-channel-card.active {
+    background: rgba(232, 160, 69, 0.1);
+    border-color: var(--accent);
+    box-shadow: 0 8px 24px rgba(232, 160, 69, 0.15);
+  }
+
+  /* Add Channel Card */
+  .mobile-channel-card.add-card {
+    background: rgba(232, 160, 69, 0.05);
+    border: 2px dashed rgba(232, 160, 69, 0.3);
+    cursor: pointer;
+  }
+
+  .mobile-channel-card.add-card:active {
+    transform: scale(0.95);
+    background: rgba(232, 160, 69, 0.1);
+  }
+
+  .add-icon {
+    font-size: 2rem;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  .card-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .card-name {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: white;
+    max-width: 100%;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.2;
+  }
+
+  .card-remove {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    border: none;
+    cursor: pointer;
+  }
+
+  .yt-video-grid, .yt-pending-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+  }
 }

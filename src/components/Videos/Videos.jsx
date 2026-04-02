@@ -115,6 +115,7 @@ export default function Videos() {
     const [error, setError] = useState('');
 
     const [activeVideo, setActiveVideo] = useState(null); // ID for the modal player
+    const [activeTab, setActiveTab] = useState('feed'); // mobile only: feed | saved | channels
 
     // Load initial data from Google Sheets
     const loadSyncData = useCallback(async () => {
@@ -191,6 +192,7 @@ export default function Videos() {
             await api.saveYTChannel(newCh);
             setChannels(prev => [...prev, newCh]);
             setAddQuery('');
+            if (activeTab === 'channels') setActiveTab('feed'); // Switch back to feed after adding
         } catch {
             setError('Error searching channel. Try again.');
         } finally {
@@ -252,7 +254,17 @@ export default function Videos() {
 
     return (
         <div className="videos-layout">
-            <aside className="videos-sidebar">
+            {/* ─── Mobile Segmented Control ─── */}
+            <div className="vault-mobile-nav mobile-only" style={{ marginBottom: '1.25rem' }}>
+                <div className="vault-segments">
+                    <button className={activeTab === 'feed' ? 'active' : ''} onClick={() => setActiveTab('feed')}>🔥 Feed</button>
+                    <button className={activeTab === 'saved' ? 'active' : ''} onClick={() => setActiveTab('saved')}>📚 Saved</button>
+                    <button className={activeTab === 'channels' ? 'active' : ''} onClick={() => setActiveTab('channels')}>📡 Channels</button>
+                </div>
+            </div>
+
+            {/* ─── Desktop Sidebar ─── */}
+            <aside className="videos-sidebar desktop-only">
                 <div className="videos-sidebar-header">
                     <h2 className="section-title" style={{ marginBottom: 0 }}>📺 Channels</h2>
                 </div>
@@ -288,7 +300,49 @@ export default function Videos() {
                 </div>
             </aside>
 
-            <main className="videos-feed">
+            {/* ─── Mobile Channels View ─── */}
+            {activeTab === 'channels' && (
+                <div className="mobile-channels-view mobile-only fade-in" style={{ width: '100%', padding: '0.5rem' }}>
+                    <div className="mobile-channel-list-grid">
+                        {/* Integrated Add Card */}
+                        <div className="mobile-channel-card add-card" onClick={() => {
+                            const val = window.prompt('Enter YouTube @handle or channel name:');
+                            if (val) handleAdd(val);
+                        }}>
+                            <div className="add-icon">＋</div>
+                            <span>Add Channel</span>
+                        </div>
+
+                        {channels.map(ch => (
+                            <div key={ch.id} className={`mobile-channel-card ${selected === ch.id ? 'active' : ''}`} onClick={() => { setSelected(ch.id); setActiveTab('feed'); }}>
+                                <img src={ch.thumbnail} alt="" className="card-avatar" />
+                                <span className="card-name">{ch.title}</span>
+                                <button className="card-remove" onClick={(e) => { e.stopPropagation(); removeChannel(ch.id); }}>✕</button>
+                            </div>
+                        ))}
+                    </div>
+                    {error && <p className="yt-error" style={{ marginTop: '1rem', textAlign: 'center' }}>{error}</p>}
+                </div>
+            )}
+
+            {/* ─── Video Feed Area ─── */}
+            <main className={`videos-feed ${(activeTab === 'channels' && 'desktop-only') || ''}`}>
+                {/* Mobile Channel Strip (on Feed tab) */}
+                {activeTab === 'feed' && channels.length > 0 && (
+                    <div className="mobile-channel-strip mobile-only fade-in">
+                        <div className={`strip-item ${!selected ? 'active' : ''}`} onClick={() => setSelected(null)}>
+                            <div className="strip-avatar-all">🌐</div>
+                            <span>All</span>
+                        </div>
+                        {channels.map(ch => (
+                            <div key={ch.id} className={`strip-item ${selected === ch.id ? 'active' : ''}`} onClick={() => setSelected(ch.id)}>
+                                <img src={ch.thumbnail} alt="" className="strip-avatar" />
+                                <span>{ch.title.split(' ')[0]}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 {loading && (
                     <div className="yt-loading">
                         {[...Array(8)].map((_, i) => (
@@ -302,9 +356,9 @@ export default function Videos() {
                 )}
 
                 {!loading && (
-                    <>
+                    <div className="fade-in">
                         {/* Pending Approval section */}
-                        {pending.length > 0 && (
+                        {activeTab === 'feed' && pending.length > 0 && (
                             <div className="yt-pending-section">
                                 <div className="yt-pending-header">
                                     <span className="yt-pending-title">🕐 Newly Added</span>
@@ -325,7 +379,7 @@ export default function Videos() {
                         )}
 
                         {/* Approved/Saved Library section */}
-                        {filteredLibrary.length > 0 && (
+                        {(activeTab === 'saved' || (activeTab === 'feed' && pending.length === 0)) && filteredLibrary.length > 0 && (
                             <div className={pending.length > 0 ? 'yt-approved-section' : ''}>
                                 <div className="yt-approved-header">✅ Saved Library</div>
                                 <div className="yt-video-grid">
@@ -340,13 +394,13 @@ export default function Videos() {
                             </div>
                         )}
 
-                        {filteredLibrary.length === 0 && pending.length === 0 && channels.length > 0 && (
+                        {activeTab !== 'channels' && filteredLibrary.length === 0 && pending.length === 0 && channels.length > 0 && (
                             <div className="empty-state">
                                 <span className="empty-emoji">🎬</span>
                                 <p>No videos found</p>
                             </div>
                         )}
-                    </>
+                    </div>
                 )}
             </main>
 

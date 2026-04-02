@@ -135,6 +135,7 @@ export default function TwitchPage() {
     const [adding, setAdding] = useState(false);
 
     const [activePlayer, setActivePlayer] = useState({ channel: null, videoId: null });
+    const [activeTab, setActiveTab] = useState('live'); // mobile only: live | vods | library | streamers
 
     const loadSyncData = useCallback(async () => {
         console.log('[Twitch] Loading data...');
@@ -170,12 +171,13 @@ export default function TwitchPage() {
         loadSyncData();
     }, [loadSyncData]);
 
-    const handleAdd = async () => {
-        if (!addQuery.trim()) return;
+    const handleAdd = async (overrideQuery = null) => {
+        const query = overrideQuery || addQuery;
+        if (!query.trim()) return;
         setAdding(true);
         setError('');
         try {
-            const ch = await api.searchTwitchChannel(addQuery.trim());
+            const ch = await api.searchTwitchChannel(query.trim());
             if (!ch || ch.error) { setError(ch?.error || 'Channel not found.'); return; }
             if (channels.find(c => c.id === ch.id)) { setError('Already followed!'); return; }
 
@@ -189,6 +191,7 @@ export default function TwitchPage() {
             await api.saveTwitchChannel(newCh);
             setChannels(prev => [...prev, newCh]);
             setAddQuery('');
+            if (activeTab === 'streamers') setActiveTab('live');
             loadSyncData(); // Refresh data for new channel
         } catch (err) {
             setError('Error adding channel.');
@@ -271,7 +274,18 @@ export default function TwitchPage() {
 
     return (
         <div className="videos-layout">
-            <aside className="videos-sidebar">
+            {/* ─── Mobile Segmented Control ─── */}
+            <div className="vault-mobile-nav mobile-only" style={{ marginBottom: '1.25rem' }}>
+                <div className="vault-segments">
+                    <button className={activeTab === 'live' ? 'active' : ''} onClick={() => setActiveTab('live')}>🔴 Live</button>
+                    <button className={activeTab === 'vods' ? 'active' : ''} onClick={() => setActiveTab('vods')}>🎞️ VODs</button>
+                    <button className={activeTab === 'library' ? 'active' : ''} onClick={() => setActiveTab('library')}>📚 Library</button>
+                    <button className={activeTab === 'streamers' ? 'active' : ''} onClick={() => setActiveTab('streamers')}>📡 Streamers</button>
+                </div>
+            </div>
+
+            {/* ─── Desktop Sidebar ─── */}
+            <aside className="videos-sidebar desktop-only">
                 <div className="videos-sidebar-header">
                     <h2 className="section-title" style={{ marginBottom: 0 }}>🎮 Twitch</h2>
                 </div>
@@ -309,7 +323,48 @@ export default function TwitchPage() {
                 </div>
             </aside>
 
-            <main className="videos-feed">
+            {/* ─── Mobile Streamers View ─── */}
+            {activeTab === 'streamers' && (
+                <div className="mobile-channels-view mobile-only fade-in" style={{ width: '100%', padding: '1rem 0.5rem' }}>
+                    <div className="mobile-channel-list-grid">
+                        {/* Integrated Add Card */}
+                        <div className="mobile-channel-card add-card" onClick={() => {
+                            const val = window.prompt('Enter Twitch channel name:');
+                            if (val) handleAdd(val);
+                        }}>
+                            <div className="add-icon" style={{ color: '#a970ff' }}>＋</div>
+                            <span>Add Streamer</span>
+                        </div>
+
+                        {channels.map(ch => (
+                            <div key={ch.id} className={`mobile-channel-card ${selected === ch.id ? 'active' : ''}`} onClick={() => { setSelected(ch.id); setActiveTab('live'); }}>
+                                <img src={ch.profile_image_url} alt="" className="card-avatar" style={{ border: '2px solid #a970ff' }} />
+                                <span className="card-name">{ch.display_name}</span>
+                                <button className="card-remove" onClick={(e) => { e.stopPropagation(); handleRemove(ch.id); }}>✕</button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* ─── Content Feed ─── */}
+            <main className={`videos-feed ${(activeTab === 'streamers' && 'desktop-only') || ''}`}>
+                {/* Mobile Channel Strip */}
+                {(activeTab === 'live' || activeTab === 'vods' || activeTab === 'library') && channels.length > 0 && (
+                    <div className="mobile-channel-strip mobile-only fade-in">
+                        <div className={`strip-item ${!selected ? 'active' : ''}`} onClick={() => setSelected(null)}>
+                            <div className="strip-avatar-all" style={{ background: '#a970ff22', color: '#a970ff' }}>🌐</div>
+                            <span>All</span>
+                        </div>
+                        {channels.map(ch => (
+                            <div key={ch.id} className={`strip-item ${selected === ch.id ? 'active' : ''}`} onClick={() => setSelected(ch.id)}>
+                                <img src={ch.profile_image_url} alt="" className="strip-avatar" style={{ borderColor: '#a970ff' }} />
+                                <span>{ch.display_name.split(' ')[0]}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 {loading && (
                     <div className="yt-loading">
                         {[...Array(6)].map((_, i) => (
@@ -322,9 +377,9 @@ export default function TwitchPage() {
                 )}
 
                 {!loading && (
-                    <>
+                    <div className="fade-in">
                         {/* 1. Live Now Section */}
-                        {filteredStreams.length > 0 && (
+                        {activeTab === 'live' && (
                             <div className="yt-pending-section" style={{ borderLeft: '4px solid #ff4655' }}>
                                 <div className="yt-pending-header">
                                     <span className="yt-pending-title" style={{ color: '#ff4655' }}>🔴 Live Now</span>
@@ -340,13 +395,19 @@ export default function TwitchPage() {
                                             onSave={handleSave}
                                         />
                                     ))}
+                                    {filteredStreams.length === 0 && (
+                                        <div className="empty-state" style={{ padding: '3rem' }}>
+                                            <span className="empty-emoji">💤</span>
+                                            <p>No one is live right now.</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
 
-                        {/* 2. Recent Highlights (Recent VODs) */}
-                        {pendingVideos.length > 0 && (
-                            <div className="yt-pending-section" style={{ marginTop: '2.5rem' }}>
+                        {/* 2. VODs Section */}
+                        {activeTab === 'vods' && (
+                            <div className="yt-pending-section">
                                 <div className="yt-pending-header">
                                     <span className="yt-pending-title">🎞️ Recent Highlights</span>
                                     <span className="yt-pending-count">{pendingVideos.length}</span>
@@ -362,14 +423,20 @@ export default function TwitchPage() {
                                             onDismiss={handleDismiss}
                                         />
                                     ))}
+                                    {pendingVideos.length === 0 && (
+                                        <div className="empty-state" style={{ padding: '3rem' }}>
+                                            <span className="empty-emoji">📼</span>
+                                            <p>No recent highlights.</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
 
                         {/* 3. Saved Library */}
-                        {filteredLibrary.length > 0 && (
+                        {(activeTab === 'library' || (activeTab === 'live' && filteredStreams.length === 0 && pendingVideos.length === 0)) && filteredLibrary.length > 0 && (
                             <div className="yt-section">
-                                <h3 className="yt-section-title">📚 Saved Library</h3>
+                                <div className="yt-approved-header">📚 Saved Library</div>
                                 <div className="yt-video-grid">
                                     {filteredLibrary.map(item => (
                                         <TwitchVideoCard
@@ -384,21 +451,20 @@ export default function TwitchPage() {
                             </div>
                         )}
 
-                        {channels.length === 0 && (
-                            <div className="empty-state" style={{ marginTop: '6rem' }}>
-                                <span className="empty-emoji">📡</span>
-                                <p>No channels followed yet. Use the sidebar to find your favorite streamers!</p>
-                            </div>
-                        )}
-
-                        {filteredStreams.length === 0 && pendingVideos.length === 0 && filteredLibrary.length === 0 && channels.length > 0 && (
-
-                            <div className="empty-state" style={{ marginTop: '6rem' }}>
+                        {activeTab !== 'streamers' && filteredStreams.length === 0 && pendingVideos.length === 0 && filteredLibrary.length === 0 && channels.length > 0 && (
+                            <div className="empty-state" style={{ marginTop: '3rem' }}>
                                 <span className="empty-emoji">🎮</span>
                                 <p>No active streams or recent highlights found.</p>
                             </div>
                         )}
-                    </>
+
+                        {channels.length === 0 && activeTab !== 'streamers' && (
+                            <div className="empty-state" style={{ marginTop: '3rem' }}>
+                                <span className="empty-emoji">📡</span>
+                                <p>No streamers followed. Switch to "Streamers" to add some!</p>
+                            </div>
+                        )}
+                    </div>
                 )}
             </main>
 
