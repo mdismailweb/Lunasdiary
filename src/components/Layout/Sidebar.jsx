@@ -41,20 +41,6 @@ export default function Sidebar({ active, onNavigate, userName, isOffline, onPre
                 </div>
             </div>
 
-            <button 
-                className={`sync-btn ${preload?.active ? 'syncing' : ''}`}
-                onClick={onPreload}
-                disabled={preload?.active || isOffline}
-                title="Shuffle & Preload Vault for Offline Use"
-            >
-                <span className="sync-icon">🔄</span>
-                <span>
-                    {preload?.active 
-                        ? `Syncing ${preload.current}/${preload.total || 500}...` 
-                        : 'Sync Vault'}
-                </span>
-            </button>
-
             <nav className="sidebar-nav">
                 {TABS.map(tab => (
                     <div
