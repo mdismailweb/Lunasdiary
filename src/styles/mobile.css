@@ -716,44 +716,14 @@ video.lightbox-img {
 
 /* ── Music Player Mobile ──────────────────────────────────── */
 @media (max-width: 768px) {
+  /* Hide the bottom music bar — header disc button opens the popup modal instead */
   .music-player {
-    /* Position it just above the bottom nav */
-    display: flex;
-    height: 48px;
-    padding: 0 0.75rem;
-    gap: 0.75rem;
-    position: fixed;
-    bottom: calc(65px + env(safe-area-inset-bottom));
-    left: 0;
-    right: 0;
-    z-index: 1500;
-    border-top: 1px solid rgba(167, 139, 250, 0.08);
-    border-bottom: none !important;
-    font-size: 0.78rem;
+    display: none !important;
   }
 
-  /* Shrink track text for small screens */
-  .player-station {
-    font-size: 0.72rem !important;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 140px;
-  }
-
-  /* Station picker opens upward above the music bar */
-  .station-picker {
-    bottom: calc(48px + 4px) !important;
-  }
-
-  /* Keep volume slider usable but slimmer */
-  input[type="range"].volume-slider {
-    width: 60px !important;
-  }
-
-  /* Content area must not go behind music bar + bottom nav */
+  /* Content area only needs to clear the bottom nav */
   .content-area {
-    padding-bottom: calc(65px + 48px + env(safe-area-inset-bottom) + 30px) !important;
+    padding-bottom: calc(65px + env(safe-area-inset-bottom) + 20px) !important;
   }
 
   /* ── Videos & Twitch Mobile Overwrites ────────────────────── */

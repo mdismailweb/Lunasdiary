@@ -2535,6 +2535,36 @@ textarea.field-input {
     padding: 0.5rem;
   }
 
+  /* Fullscreen support on mobile */
+  .yt-modal-overlay:fullscreen,
+  .yt-modal-overlay:-webkit-full-screen,
+  .yt-modal-overlay:-moz-full-screen,
+  .yt-modal-overlay:-ms-fullscreen {
+    padding: 0;
+  }
+
+  .yt-modal-content {
+    max-width: 100%;
+    border-radius: 0;
+  }
+
+  /* Fullscreen mode - fill entire viewport */
+  .yt-modal-overlay:fullscreen .yt-modal-content,
+  .yt-modal-overlay:-webkit-full-screen .yt-modal-content,
+  .yt-modal-overlay:-moz-full-screen .yt-modal-content,
+  .yt-modal-overlay:-ms-fullscreen .yt-modal-content {
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .yt-modal-overlay:fullscreen .yt-video-container,
+  .yt-modal-overlay:-webkit-full-screen .yt-video-container,
+  .yt-modal-overlay:-moz-full-screen .yt-video-container,
+  .yt-modal-overlay:-ms-fullscreen .yt-video-container {
+    padding-bottom: 0;
+    height: 100%;
+  }
+
   .yt-modal-close {
     top: 10px;
     right: 10px;
@@ -2546,6 +2576,23 @@ textarea.field-input {
     align-items: center;
     justify-content: center;
     font-size: 1rem;
+  }
+
+  /* Landscape orientation - video fills entire viewport */
+  @media (orientation: landscape) {
+    .yt-modal-overlay {
+      padding: 0;
+    }
+
+    .yt-modal-content {
+      max-width: 100vw;
+      max-height: 100vh;
+    }
+
+    .yt-video-container {
+      padding-bottom: 0;
+      height: 100vh;
+    }
   }
 }
 
@@ -2730,6 +2777,36 @@ textarea.field-input {
     padding: 0.5rem;
   }
 
+  /* Fullscreen support on mobile */
+  .yt-modal-overlay:fullscreen,
+  .yt-modal-overlay:-webkit-full-screen,
+  .yt-modal-overlay:-moz-full-screen,
+  .yt-modal-overlay:-ms-fullscreen {
+    padding: 0;
+  }
+
+  .yt-modal-content {
+    max-width: 100%;
+    border-radius: 0;
+  }
+
+  /* Fullscreen mode - fill entire viewport */
+  .yt-modal-overlay:fullscreen .yt-modal-content,
+  .yt-modal-overlay:-webkit-full-screen .yt-modal-content,
+  .yt-modal-overlay:-moz-full-screen .yt-modal-content,
+  .yt-modal-overlay:-ms-fullscreen .yt-modal-content {
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .yt-modal-overlay:fullscreen .yt-video-container,
+  .yt-modal-overlay:-webkit-full-screen .yt-video-container,
+  .yt-modal-overlay:-moz-full-screen .yt-video-container,
+  .yt-modal-overlay:-ms-fullscreen .yt-video-container {
+    padding-bottom: 0;
+    height: 100%;
+  }
+
   .yt-modal-close {
     top: 10px;
     right: 10px;
@@ -2741,6 +2818,23 @@ textarea.field-input {
     align-items: center;
     justify-content: center;
     font-size: 1rem;
+  }
+
+  /* Landscape orientation - video fills entire viewport */
+  @media (orientation: landscape) {
+    .yt-modal-overlay {
+      padding: 0;
+    }
+
+    .yt-modal-content {
+      max-width: 100vw;
+      max-height: 100vh;
+    }
+
+    .yt-video-container {
+      padding-bottom: 0;
+      height: 100vh;
+    }
   }
 }
 

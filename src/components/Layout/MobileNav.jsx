@@ -5,10 +5,10 @@ import React from 'react';
  */
 export default function MobileNav({ active, onNavigate, onToggleMenu }) {
     const primaryTabs = [
-        { id: 'dashboard', icon: '📊', label: 'Dash' },
-        { id: 'journal', icon: '📓', label: 'Journal' },
-        { id: 'vault', icon: '🔒', label: 'Vault' },
-        { id: 'insights', icon: '💡', label: 'Insights' },
+        { id: 'dashboard', icon: '🌸', label: 'Home' },
+        { id: 'journal', icon: '📖', label: 'Journal' },
+        { id: 'vault', icon: '💎', label: 'Vault' },
+        { id: 'insights', icon: '✨', label: 'Insights' },
     ];
 
     return (
@@ -25,7 +25,7 @@ export default function MobileNav({ active, onNavigate, onToggleMenu }) {
             ))}
             
             <button className="mobile-nav-item" onClick={onToggleMenu}>
-                <span className="mobile-nav-icon">⋮</span>
+                <span className="mobile-nav-icon">🎀</span>
                 <span className="mobile-nav-label">More</span>
             </button>
         </nav>

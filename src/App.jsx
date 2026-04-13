@@ -28,7 +28,7 @@ import { OfflineCache } from './services/offlineCache';
 import OfflineCacheBadge from './components/OfflineCacheBadge';
 
 export default function App() {
-    const [tab, setTab] = useState(() => localStorage.getItem('luna_active_tab') || 'dashboard');
+    const [tab, setTab] = useState(() => localStorage.getItem('luna_active_tab') || 'journal');
     const [userName, setUserName] = useState('');
     const [theme, setTheme] = useState('dark');
     const [isOffline, setIsOffline] = useState(!navigator.onLine);

@@ -71,6 +71,20 @@ export default function BookmarksPage() {
         }
     };
 
+    const handleDelete = async (bookmarkId, e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!window.confirm('Are you sure you want to delete this bookmark?')) return;
+
+        try {
+            await api.deleteBookmark(bookmarkId);
+            setBookmarks(bookmarks.filter(b => b.id !== bookmarkId));
+        } catch (err) {
+            console.error('Delete bookmark error:', err);
+            alert('Failed to delete bookmark');
+        }
+    };
+
     const filtered = bookmarks.filter(b =>
         b.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         b.url?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -120,17 +134,17 @@ export default function BookmarksPage() {
                         </div>
                     )}
                     {filtered.map(b => (
-                        <a key={b.id} href={b.url} target="_blank" rel="noopener noreferrer" style={{
+                        <div key={b.id} style={{
                             background: 'var(--card-bg)',
                             borderRadius: '20px',
                             border: '1px solid rgba(255,255,255,0.08)',
                             padding: '1.5rem',
-                            textDecoration: 'none',
-                            color: 'inherit',
+                            paddingTop: '2.5rem',
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '1rem',
-                            transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                            transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                            position: 'relative'
                         }} onMouseEnter={e => {
                             e.currentTarget.style.transform = 'translateY(-5px)';
                             e.currentTarget.style.borderColor = 'var(--brand-color, #a29bfe)';
@@ -138,32 +152,70 @@ export default function BookmarksPage() {
                             e.currentTarget.style.transform = 'translateY(0)';
                             e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
                         }}>
-                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                <div style={{ width: '48px', height: '48px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                                    <img src={getFavicon(b.url)} alt="" style={{ width: '24px', height: '24px' }} onError={e => e.target.style.display = 'none'} />
-                                </div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <h3 style={{ margin: 0, fontSize: '1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title || b.url}</h3>
-                                    <div style={{ fontSize: '0.75rem', opacity: 0.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{new URL(b.url).hostname}</div>
-                                </div>
-                            </div>
+                            <button onClick={(e) => handleDelete(b.id, e)} style={{
+                                position: 'absolute',
+                                top: '0.75rem',
+                                right: '0.75rem',
+                                background: window.innerWidth <= 768 ? 'rgba(255, 107, 107, 0.2)' : 'rgba(255, 107, 107, 0.1)',
+                                border: '1px solid rgba(255, 107, 107, 0.3)',
+                                color: '#ff6b6b',
+                                width: window.innerWidth <= 768 ? '40px' : '32px',
+                                height: window.innerWidth <= 768 ? '40px' : '32px',
+                                borderRadius: '50%',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '1.2rem',
+                                transition: 'all 0.2s',
+                                opacity: window.innerWidth <= 768 ? 0.8 : 0.4,
+                                zIndex: 10
+                            }} onMouseEnter={e => {
+                                if (window.innerWidth > 768) {
+                                    e.target.style.opacity = '1';
+                                    e.target.style.background = 'rgba(255, 107, 107, 0.2)';
+                                }
+                            }} onMouseLeave={e => {
+                                if (window.innerWidth > 768) {
+                                    e.target.style.opacity = '0.4';
+                                    e.target.style.background = 'rgba(255, 107, 107, 0.1)';
+                                }
+                            }} title="Delete bookmark">✕</button>
 
-                            {b.note && (
-                                <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                    {b.note}
-                                </p>
-                            )}
-
-                            {b.tags && (
-                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                    {b.tags.split(',').map(tag => (
-                                        <span key={tag} style={{ background: 'rgba(255,255,255,0.05)', padding: '3px 8px', borderRadius: '6px', fontSize: '0.7rem', opacity: 0.7 }}>
-                                            #{tag.trim()}
-                                        </span>
-                                    ))}
+                            <a href={b.url} target="_blank" rel="noopener noreferrer" style={{
+                                textDecoration: 'none',
+                                color: 'inherit',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '1rem'
+                            }}>
+                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                    <div style={{ width: '48px', height: '48px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                        <img src={getFavicon(b.url)} alt="" style={{ width: '24px', height: '24px' }} onError={e => e.target.style.display = 'none'} />
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <h3 style={{ margin: 0, fontSize: '1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title || b.url}</h3>
+                                        <div style={{ fontSize: '0.75rem', opacity: 0.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{new URL(b.url).hostname}</div>
+                                    </div>
                                 </div>
-                            )}
-                        </a>
+
+                                {b.note && (
+                                    <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                        {b.note}
+                                    </p>
+                                )}
+
+                                {b.tags && (
+                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                        {b.tags.split(',').map(tag => (
+                                            <span key={tag} style={{ background: 'rgba(255,255,255,0.05)', padding: '3px 8px', borderRadius: '6px', fontSize: '0.7rem', opacity: 0.7 }}>
+                                                #{tag.trim()}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                            </a>
+                        </div>
                     ))}
                 </div>
             )}

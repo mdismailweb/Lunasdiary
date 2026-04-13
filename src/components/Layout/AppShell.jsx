@@ -13,9 +13,15 @@ export default function AppShell({ activeTab, onNavigate, userName, isOffline, p
         setIsMenuOpen(false);
     };
 
+    const handleMusicClick = () => {
+        if (window.openMusicPlayer) {
+            window.openMusicPlayer();
+        }
+    };
+
     return (
         <>
-            <MobileHeader userName={userName} isOffline={isOffline} />
+            <MobileHeader userName={userName} isOffline={isOffline} onMusicClick={handleMusicClick} />
             
             {/* ── Floating Preloader Pill ── */}
             {preload?.active && (
@@ -52,7 +58,7 @@ export default function AppShell({ activeTab, onNavigate, userName, isOffline, p
                 </div>
             )}
 
-            <div className={`app-shell ${isOffline ? 'is-offline' : ''} ${isMenuOpen ? 'menu-open' : ''}`}>
+            <div className={`app-shell candy-theme ${isOffline ? 'is-offline' : ''} ${isMenuOpen ? 'menu-open' : ''}`}>
                 <Sidebar 
                     active={activeTab} 
                     onNavigate={handleMobileNavigate} 

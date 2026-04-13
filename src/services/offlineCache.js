@@ -244,6 +244,15 @@ export const OfflineCache = {
         return getCachedData(config.key);
     },
 
+    // Invalidate specific cache
+    invalidate(section) {
+        const config = CACHE_CONFIG[section];
+        if (config) {
+            localStorage.removeItem(config.key);
+            console.log(`[OfflineCache] Invalidated ${section} cache`);
+        }
+    },
+
     // Clear all caches
     clearAll() {
         Object.values(CACHE_CONFIG).forEach(config => {

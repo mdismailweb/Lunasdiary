@@ -7,6 +7,7 @@ import './styles/global.css'
 import './styles/animations.css'
 import './styles/preloader.css'
 import './styles/mobile.css'
+import './styles/candy-theme.css'
 
 
 // ── Service Worker Registration ────────────────────────────────

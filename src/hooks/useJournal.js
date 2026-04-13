@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as api from '../services/api';
+import { OfflineCache } from '../services/offlineCache';
 import { useToast } from '../context/ToastContext';
 
 export function useJournal() {
@@ -49,6 +50,8 @@ export function useJournal() {
         try {
             await api.deleteEntry(entry_id);
             setEntries(prev => prev.filter(e => e.entry_id !== entry_id));
+            // Invalidate journal cache so fresh data is fetched on page refresh
+            OfflineCache.invalidate('journal');
             addToast('Entry deleted', 'info');
         } catch (e) {
             addToast('Failed to delete entry', 'error');

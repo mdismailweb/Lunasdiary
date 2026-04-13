@@ -27,6 +27,7 @@ function loadYTApi() {
 }
 
 const LS_RADIO_KEY = 'luna_radio_url';
+const LS_MUSIC_MODAL_KEY = 'luna_music_modal_open';
 
 // ─────────────────────────────────────────────────────────────
 export default function MusicPlayer() {
@@ -39,13 +40,22 @@ export default function MusicPlayer() {
         station, selectStation } = useAudio();
     const [muted, setMuted] = useState(false);
     const [prevVol, setPrevVol] = useState(volume);
-    const [showPicker, setShowPicker] = useState(false);
+    const [showModal, setShowModal] = useState(() => localStorage.getItem(LS_MUSIC_MODAL_KEY) === 'true');
 
     // Radio station state
     const [radioUrl, setRadioUrl] = useState(() => localStorage.getItem(LS_RADIO_KEY) || '');
     const [radioInput, setRadioInput] = useState('');
     const [showRadioInput, setShowRadioInput] = useState(false);
     const [trackName, setTrackName] = useState(''); // live track title from YT
+
+    // Add method to open modal from header
+    useEffect(() => {
+        window.openMusicPlayer = () => {
+            setShowModal(true);
+            localStorage.setItem(LS_MUSIC_MODAL_KEY, 'true');
+        };
+        return () => delete window.openMusicPlayer;
+    }, []);
 
     // ── YT Player helpers ─────────────────────────────────────
     const createYTPlayer = useCallback((videoId) => {
@@ -61,17 +71,13 @@ export default function MusicPlayer() {
                 autoplay: 0, controls: 0, loop: 1,
                 playlist: videoId, rel: 0, modestbranding: 1,
                 playsinline: 1,
-                mute: 1 // ← muted autoplay is ALWAYS allowed by browsers
+                mute: 1
             },
             events: {
                 onReady: (e) => {
-                    // Start muted (browser always allows muted autoplay) then unmute on first interaction
                     e.target.mute();
                     e.target.setVolume(Math.round(volume * 100));
-                    // e.target.playVideo(); // Removed auto-play
-                    // setPlaying driven by onStateChange only
                     
-                    // Unmute as soon as user taps anywhere
                     const unmute = () => {
                         try {
                             e.target.unMute();
@@ -83,7 +89,6 @@ export default function MusicPlayer() {
                     document.addEventListener('click', unmute);
                     document.addEventListener('touchstart', unmute, { passive: true });
 
-                    // Grab the video title for the bottom bar
                     try {
                         const title = e.target.getVideoData()?.title;
                         if (title) {
@@ -102,7 +107,7 @@ export default function MusicPlayer() {
                 onStateChange: (e) => {
                     if (e.data === window.YT.PlayerState.PLAYING) setPlaying(true);
                     if (e.data === window.YT.PlayerState.PAUSED) setPlaying(false);
-                    if (e.data === -1) setPlaying(false); // UNSTARTED
+                    if (e.data === -1) setPlaying(false);
                 }
             },
         });
@@ -124,8 +129,7 @@ export default function MusicPlayer() {
                 pendingYT.current = null;
             }
         };
-        if (window.YT && window.YT.Player) {/* already ready */ }
-    }, []); // eslint-disable-line
+    }, []);
 
     useEffect(() => {
         const audio = audioRef.current;
@@ -133,13 +137,9 @@ export default function MusicPlayer() {
         audio.volume = volume;
         registerMusic(audio);
 
-        // Autoplay removed as per user request
-
-        // Setup Media Session API for background controls
         if ('mediaSession' in navigator) {
             navigator.mediaSession.setActionHandler('play', () => togglePlay());
             navigator.mediaSession.setActionHandler('pause', () => togglePlay());
-            // Pre-fill initial metadata
             navigator.mediaSession.metadata = new window.MediaMetadata({
                 title: STATIONS[0].desc,
                 artist: STATIONS[0].label,
@@ -147,9 +147,8 @@ export default function MusicPlayer() {
                 artwork: [{ src: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' }]
             });
         }
-    }, []); // eslint-disable-line
+    }, []);
 
-    // Sync volume to YT player
     useEffect(() => {
         if (!ytPlayer.current) return;
         if (station.id === 'ambience' || station.id === 'radio') {
@@ -158,7 +157,6 @@ export default function MusicPlayer() {
         }
     }, [volume, muted, station.id]);
 
-    // Background Play Fix: Sync state to MediaSession
     useEffect(() => {
         if ('mediaSession' in navigator) {
             navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
@@ -204,7 +202,6 @@ export default function MusicPlayer() {
         setMuted(v === 0);
     };
 
-    // Start playing a URL (YouTube or stream)
     const playUrl = useCallback((url) => {
         if (!url) return;
         const ytId = extractYTId(url);
@@ -221,7 +218,6 @@ export default function MusicPlayer() {
         }
     }, [createYTPlayer, setPlaying]);
 
-    // Save & play the custom radio URL
     const applyRadioUrl = () => {
         const url = radioInput.trim();
         if (!url) return;
@@ -232,18 +228,13 @@ export default function MusicPlayer() {
         playUrl(url);
     };
 
-    // Switch station
     const handleStation = (st) => {
-        setShowPicker(false);
-
         if (st.id === 'radio') {
             selectStation(st);
             if (radioUrl) {
                 playUrl(radioUrl);
             } else {
-                // No URL yet — show the input
                 setShowRadioInput(true);
-                setShowPicker(true); // keep picker open so input is visible
             }
             return;
         }
@@ -276,77 +267,122 @@ export default function MusicPlayer() {
         }
     };
 
+    const closeModal = () => {
+        setShowModal(false);
+        localStorage.setItem(LS_MUSIC_MODAL_KEY, 'false');
+    };
+
     // ── Render ────────────────────────────────────────────────
     return (
-        <div className="music-player">
+        <>
             <audio ref={audioRef} playsInline />
             <div ref={ytDivRef} style={{ position: 'fixed', left: '-9999px', bottom: 0, width: '1px', height: '1px', pointerEvents: 'none' }} />
 
-            {/* Station picker */}
-            {showPicker && (
-                <div className="station-picker">
-                    {STATIONS.map(st => (
-                        <div key={st.id}>
-                            <button
-                                className={`station-option ${st.id === station.id ? 'active' : ''}`}
-                                onClick={() => handleStation(st)}
-                            >
-                                <span className="station-icon">{st.icon}</span>
-                                <span className="station-meta">
-                                    <strong>{st.label}</strong>
-                                    <small>{st.id === 'radio' && radioUrl ? radioUrl.slice(0, 36) + '…' : st.desc}</small>
-                                </span>
-                                {st.id === station.id && <span className="station-check">✓</span>}
-                            </button>
+            {/* Desktop bottom bar — hidden on mobile via CSS */}
+            <div className="music-player" />
 
-                            {/* Inline URL input for Radio */}
-                            {st.id === 'radio' && (showRadioInput || station.id === 'radio') && (
-                                <div className="radio-url-row">
-                                    <input
-                                        className="radio-url-input"
-                                        placeholder="Paste YouTube or stream URL…"
-                                        value={radioInput}
-                                        onChange={e => setRadioInput(e.target.value)}
-                                        onKeyDown={e => e.key === 'Enter' && applyRadioUrl()}
-                                        autoFocus
-                                    />
-                                    <button className="radio-url-btn" onClick={applyRadioUrl}>▶</button>
+            {/* Compact popup */}
+            {showModal && (
+                <>
+                    {/* Invisible backdrop to close on tap-outside */}
+                    <div onClick={closeModal} style={{ position: 'fixed', inset: 0, zIndex: 6000 }} />
+
+                    <div className="candy-theme" style={{
+                        position: 'fixed',
+                        top: '68px',
+                        right: '12px',
+                        zIndex: 6001,
+                        width: '280px',
+                        background: 'linear-gradient(135deg, #1a1930 0%, #221e3a 100%)',
+                        border: '1px solid rgba(255,107,157,0.25)',
+                        borderRadius: '16px',
+                        boxShadow: '0 16px 40px rgba(0,0,0,0.6), 0 0 20px rgba(255,107,157,0.1)',
+                        overflow: 'hidden',
+                        animation: 'popup-drop 0.22s cubic-bezier(0.34,1.56,0.64,1) both'
+                    }}>
+                        {/* Header row */}
+                        <div style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '12px 14px 10px',
+                            borderBottom: '1px solid rgba(255,255,255,0.07)'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '1.4rem', display: 'inline-block', animation: playing ? 'spin-soft 3s linear infinite' : 'none' }}>💿</span>
+                                <div>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ff6b9d', letterSpacing: '0.5px', textTransform: 'uppercase' }}>{station.label}</div>
+                                    <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '155px' }}>{trackName || station.desc}</div>
                                 </div>
-                            )}
+                            </div>
+                            <button onClick={closeModal} style={{
+                                background: 'rgba(255,255,255,0.07)', border: 'none', color: 'rgba(255,255,255,0.5)',
+                                width: '26px', height: '26px', borderRadius: '50%', cursor: 'pointer', fontSize: '0.8rem',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                            }}>✕</button>
                         </div>
-                    ))}
-                </div>
+
+                        {/* Play + Volume row */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px' }}>
+                            <button onClick={togglePlay} style={{
+                                background: 'linear-gradient(135deg, #ff6b9d, #c084d0)',
+                                border: 'none', color: '#fff', borderRadius: '50%',
+                                width: '38px', height: '38px', fontSize: '1rem', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                flexShrink: 0, boxShadow: '0 4px 14px rgba(255,107,157,0.4)'
+                            }}>
+                                {playing ? '⏸' : '▶'}
+                            </button>
+                            <button onClick={toggleMute} style={{ background: 'none', border: 'none', fontSize: '1.1rem', cursor: 'pointer', flexShrink: 0, padding: 0 }}>
+                                {muted || volume === 0 ? '🔇' : volume < 0.4 ? '🔉' : '🔊'}
+                            </button>
+                            <input
+                                type="range" min="0" max="1" step="0.01"
+                                value={muted ? 0 : volume} onChange={onVolumeChange}
+                                style={{ flex: 1, accentColor: '#ff6b9d', cursor: 'pointer', height: '4px' }}
+                            />
+                            <span style={{ fontSize: '0.7rem', color: '#ff6b9d', fontWeight: 700, minWidth: '30px', textAlign: 'right' }}>
+                                {Math.round((muted ? 0 : volume) * 100)}%
+                            </span>
+                        </div>
+
+                        {/* Station pills */}
+                        <div style={{ padding: '0 14px 12px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            {STATIONS.map(st => (
+                                <button key={st.id} onClick={() => handleStation(st)} style={{
+                                    background: st.id === station.id ? 'linear-gradient(135deg, #ff6b9d, #c084d0)' : 'rgba(255,255,255,0.06)',
+                                    border: st.id === station.id ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                                    color: '#fff', borderRadius: '100px', padding: '5px 11px',
+                                    fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', gap: '4px'
+                                }}>
+                                    {st.icon} {st.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Radio URL input */}
+                        {station.id === 'radio' && (
+                            <div style={{ padding: '0 14px 14px', display: 'flex', gap: '6px' }}>
+                                <input
+                                    placeholder="Paste YouTube or stream URL…"
+                                    value={radioInput}
+                                    onChange={e => setRadioInput(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && applyRadioUrl()}
+                                    style={{
+                                        flex: 1, fontSize: '0.72rem', padding: '6px 10px', borderRadius: '8px',
+                                        background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,107,157,0.3)',
+                                        color: '#fff', outline: 'none'
+                                    }}
+                                />
+                                <button onClick={applyRadioUrl} style={{
+                                    background: 'linear-gradient(135deg, #ff6b9d, #c084d0)', border: 'none',
+                                    color: '#fff', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem'
+                                }}>▶</button>
+                            </div>
+                        )}
+                    </div>
+                </>
             )}
-
-            {/* Station label */}
-            <button className="player-info player-info-btn" onClick={() => { setShowPicker(p => !p); if (station.id === 'radio') setShowRadioInput(true); }} title="Choose station">
-                <div className={`live-dot ${playing ? 'playing' : 'paused'}`} />
-                <div className="equalizer">
-                    <div className={`eq-bar ${playing ? 'playing' : ''}`} />
-                    <div className={`eq-bar ${playing ? 'playing' : ''}`} />
-                    <div className={`eq-bar ${playing ? 'playing' : ''}`} />
-                </div>
-                <span className="player-station">
-                    {station.icon} {station.label}
-                    {trackName ? ` · ${trackName}` : ` · ${station.desc}`}
-                </span>
-                {playing && <span className="player-live">LIVE</span>}
-                <span className="station-caret">{showPicker ? '▲' : '▼'}</span>
-            </button>
-
-            {/* Play / Pause */}
-            <button className="play-btn" onClick={togglePlay} title={playing ? 'Pause' : 'Play'}>
-                {playing ? '⏸' : '▶'}
-            </button>
-
-            {/* Volume */}
-            <div className="player-volume">
-                <button className="mute-btn settings-btn" onClick={toggleMute} title="Mute/Unmute">
-                    {muted || volume === 0 ? '🔇' : volume < 0.4 ? '🔉' : '🔊'}
-                </button>
-                <input type="range" className="volume-slider" min="0" max="1" step="0.01"
-                    value={muted ? 0 : volume} onChange={onVolumeChange} />
-            </div>
-        </div>
+        </>
     );
 }
+

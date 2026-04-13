@@ -4,6 +4,7 @@ import { SkeletonCard } from '../Shared/Skeleton';
 import MediaRow from '../Shared/MediaRow';
 import JournalCalendar from './JournalCalendar';
 import * as api from '../../services/api';
+import { OfflineCache } from '../../services/offlineCache';
 
 const MOODS = ['😊', '😌', '😐', '😰', '😔', '🤩', '😤', '🥱'];
 
@@ -18,14 +19,33 @@ export default function JournalPage() {
     const autoSaveTimer = useRef(null);
 
     // View management: 'list' or 'calendar'
-    const [viewMode, setViewMode] = useState('list');
+    const [viewMode, setViewMode] = useState('calendar');
     const [mobileView, setMobileView] = useState('list'); // 'list' or 'editor'
+    const [confirmDate, setConfirmDate] = useState(null);
     const isMobile = window.innerWidth <= 768;
 
     // Open the most recent entry, or a blank new one
     useEffect(() => {
         if (entries.length > 0 && !active && !isMobile) openEntry(entries[0]);
     }, [entries]);
+
+    // Auto-cleanup: remove empty draft entries created more than 5 minutes ago with no changes
+    useEffect(() => {
+        const cleanupInterval = setInterval(async () => {
+            const now = Date.now();
+            const fiveMinutesAgo = now - (5 * 60 * 1000);
+            
+            for (const entry of entries) {
+                if (entry.status === 'draft' && !entry.text_content && !entry.title && 
+                    new Date(entry.time_created || entry.created_at).getTime() < fiveMinutesAgo) {
+                    // Remove old empty drafts
+                    await remove(entry.entry_id);
+                }
+            }
+        }, 60000); // Check every minute
+        
+        return () => clearInterval(cleanupInterval);
+    }, [entries, remove]);
 
     const openEntry = (entry) => {
         // If entry is null, reset the draft
@@ -68,9 +88,19 @@ export default function JournalPage() {
     };
 
     const newEntry = async (dateOverride = null) => {
+        const targetDate = dateOverride || new Date().toISOString().split('T')[0];
+        
+        // Check if entry already exists for this date
+        const existingEntry = entries.find(e => String(e.date).substring(0, 10) === targetDate);
+        if (existingEntry) {
+            openEntry(existingEntry);
+            return;
+        }
+        
+        // Create new entry if none exists for this date
         const entry = await create({ 
             status: 'draft',
-            date: dateOverride || new Date().toISOString().split('T')[0]
+            date: targetDate
         });
         openEntry(entry);
     };
@@ -120,6 +150,7 @@ export default function JournalPage() {
         setActive(null);
         setDraft({});
         if (isMobile) setMobileView('list');
+        OfflineCache.invalidate('journal');
     };
 
     // Media upload helpers
@@ -224,10 +255,7 @@ export default function JournalPage() {
     return (
         <div className={`journal-layout ${mobileView}-view`} style={{ height: 'calc(100vh - var(--player-h) - 0px)' }}>
             
-            {/* ─── Mobile FAB ─── */}
-            {isMobile && mobileView === 'list' && (
-                <button className="mobile-fab" onClick={() => newEntry()}>＋</button>
-            )}
+
 
             {/* Left Panel */}
             {(mobileView === 'list' || !isMobile) && (
@@ -256,8 +284,49 @@ export default function JournalPage() {
                                         key={entry.entry_id}
                                         className={`entry-card ${active?.entry_id === entry.entry_id ? 'active' : ''}`}
                                         onClick={() => openEntry(entry)}
+                                        style={{ position: 'relative' }}
                                     >
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (window.confirm('Are you sure you want to delete this entry?')) {
+                                                    remove(entry.entry_id);
+                                                }
+                                            }}
+                                            style={{
+                                                position: 'absolute',
+                                                top: '0.5rem',
+                                                right: '0.5rem',
+                                                background: 'rgba(239, 68, 68, 0.1)',
+                                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                                color: '#ef4444',
+                                                width: '28px',
+                                                height: '28px',
+                                                borderRadius: '50%',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '1rem',
+                                                opacity: window.innerWidth <= 768 ? 0.7 : 0.3,
+                                                transition: 'all 0.2s',
+                                                zIndex: 5
+                                            }}
+                                            onMouseEnter={e => {
+                                                if (window.innerWidth > 768) {
+                                                    e.target.style.opacity = '1';
+                                                    e.target.style.background = 'rgba(239, 68, 68, 0.2)';
+                                                }
+                                            }}
+                                            onMouseLeave={e => {
+                                                if (window.innerWidth > 768) {
+                                                    e.target.style.opacity = '0.3';
+                                                    e.target.style.background = 'rgba(239, 68, 68, 0.1)';
+                                                }
+                                            }}
+                                            title="Delete entry"
+                                        >✕</button>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingRight: '1.5rem' }}>
                                             <span className="entry-card-date">{String(entry.date).substring(0, 10)}</span>
                                             <span className="entry-card-mood">{entry.mood === 'happy' ? '😊' : entry.mood === 'calm' ? '😌' : entry.mood === 'excited' ? '🤩' : entry.mood === 'sad' ? '😔' : entry.mood === 'anxious' ? '😰' : entry.mood || '😐'}</span>
                                         </div>
@@ -277,7 +346,7 @@ export default function JournalPage() {
                                     activeDate={activeDateStr}
                                     onSelect={(date, entry) => {
                                         if (entry) openEntry(entry);
-                                        else newEntry(date);
+                                        else setConfirmDate(date);
                                     }}
                                 />
                                 <div className="cal-legend">
@@ -346,8 +415,8 @@ export default function JournalPage() {
                                     <span className={`autosave-label ${savingMedia ? 'pulse' : ''}`} style={{ color: savingMedia ? 'var(--primary)' : '', fontSize: '0.75rem' }}>
                                         {savedAt}
                                     </span>
-                                    <button className="btn btn-ghost btn-sm" onClick={handleDelete} title="Delete" style={{ color: '#ef4444', marginLeft: 'auto' }}>
-                                        🗑️ Delete
+                                    <button className="btn btn-ghost btn-sm" onClick={handleDelete} title="Delete Entry" style={{ color: '#ef4444', marginLeft: 'auto', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.3)', background: 'rgba(239, 68, 68, 0.05)', fontSize: '0.9rem' }}>
+                                        🗑️ Delete Entry
                                     </button>
                                 </div>
                             </div>
@@ -381,6 +450,33 @@ export default function JournalPage() {
                             />
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* New Entry Confirmation Modal */}
+            {confirmDate && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }} onClick={() => setConfirmDate(null)}>
+                    <div className="candy-theme" style={{
+                        background: 'var(--surface, #1a1a2e)', padding: '2rem', borderRadius: '16px',
+                        border: '1px solid rgba(255,255,255,0.1)', textAlign: 'center', maxWidth: '300px',
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.5)', margin: '1rem'
+                    }} onClick={e => e.stopPropagation()}>
+                        <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📅</div>
+                        <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text, #fff)' }}>Create New Entry?</h3>
+                        <p style={{ margin: '0 0 1.5rem 0', color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem' }}>
+                            Start a new diary entry for {new Date(confirmDate + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}?
+                        </p>
+                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                            <button className="btn btn-ghost" onClick={() => setConfirmDate(null)}>Cancel</button>
+                            <button className="btn btn-primary" onClick={() => {
+                                newEntry(confirmDate);
+                                setConfirmDate(null);
+                            }}>Create Entry</button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
