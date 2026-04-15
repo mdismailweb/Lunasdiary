@@ -1289,20 +1289,20 @@ function deleteMedia(params) {
   }
 
   // Mark as deleted in sheet
-  _updateRow(S.MEDIA, 'media_id', params.media_id, { status: 'deleted' });
+  _updateRow(S.MEDIA, 'media_id', mediaId, { status: 'deleted' });
 
   // Remove reference from all journal entries, todos, insights
-  _removeMediaRef(S.JOURNAL,   'image_refs',  params.media_id);
-  _removeMediaRef(S.JOURNAL,   'audio_refs',  params.media_id);
-  _removeMediaRef(S.JOURNAL,   'file_refs',   params.media_id);
-  _removeMediaRef(S.TODOS,     'conclusion_image_refs', params.media_id);
-  _removeMediaRef(S.TODOS,     'conclusion_audio_refs', params.media_id);
-  _removeMediaRef(S.TODOS,     'conclusion_file_refs',  params.media_id);
-  _removeMediaRef(S.INSIGHTS,  'image_refs',  params.media_id);
-  _removeMediaRef(S.INSIGHTS,  'audio_refs',  params.media_id);
-  _removeMediaRef(S.INSIGHTS,  'file_refs',   params.media_id);
+  _removeMediaRef(S.JOURNAL,   'image_refs',  mediaId);
+  _removeMediaRef(S.JOURNAL,   'audio_refs',  mediaId);
+  _removeMediaRef(S.JOURNAL,   'file_refs',   mediaId);
+  _removeMediaRef(S.TODOS,     'conclusion_image_refs', mediaId);
+  _removeMediaRef(S.TODOS,     'conclusion_audio_refs', mediaId);
+  _removeMediaRef(S.TODOS,     'conclusion_file_refs',  mediaId);
+  _removeMediaRef(S.INSIGHTS,  'image_refs',  mediaId);
+  _removeMediaRef(S.INSIGHTS,  'audio_refs',  mediaId);
+  _removeMediaRef(S.INSIGHTS,  'file_refs',   mediaId);
 
-  return { deleted: params.media_id };
+  return { deleted: mediaId };
 }
 
 function _removeMediaRef(sheetName, colName, mediaId) {
