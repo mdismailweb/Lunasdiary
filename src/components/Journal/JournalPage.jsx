@@ -269,13 +269,7 @@ export default function JournalPage() {
                         </div>
                     </div>
 
-                    {!isMobile && (
-                        <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)' }}>
-                            <button className="btn btn-primary btn-sm" style={{ width: '100%' }} onClick={() => newEntry()}>
-                                ✏️ New Entry
-                            </button>
-                        </div>
-                    )}
+                    {/* New entry is handled via Calendar selection, button removed to declutter */}
 
                     <div className="journal-sidebar-content">
                         {viewMode === 'list' ? (
