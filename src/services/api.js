@@ -4,7 +4,7 @@
 // through this file. Set your deployment URL below.
 // ============================================================
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw__LVFJFBpEjCI99hLIN-xjfY19WrLbL5x_5ynMI1WBAI9Pb9r8tlIaN5bsUbkiVV3/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyw1q-VqgHq4DJTi9Hh1ncN33UgwTU3XL01-Xyk2_luhsmt0rRQ4Mh6KbUxHY-mG9cY/exec';
 
 async function _call(action, params = {}) {
     console.log(`[API Request] ${action}`, params);
@@ -212,7 +212,7 @@ export function getLocalDate(date = new Date()) {
 
 export function sanitizeDate(dateVal) {
     if (!dateVal) return getLocalDate();
-    
+
     // Robustly handle Date objects or valid date strings
     const d = new Date(dateVal);
     if (!isNaN(d.getTime())) {
