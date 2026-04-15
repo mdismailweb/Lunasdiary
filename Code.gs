@@ -1142,7 +1142,12 @@ function _isHabitDue(habit, date) {
 function uploadMedia(params) {
   if (!params.base64data) throw new Error('base64data required');
   if (!params.filename)   throw new Error('filename required');
-  if (!params.media_type) throw new Error('media_type required (image|audio|file)');
+  if (!params.media_type) {
+    if (params.mime_type && params.mime_type.indexOf('image') !== -1) params.media_type = 'image';
+    else if (params.mime_type && params.mime_type.indexOf('audio') !== -1) params.media_type = 'audio';
+    else if (params.mime_type && params.mime_type.indexOf('video') !== -1) params.media_type = 'image'; // treat video as image for journal for now
+    else params.media_type = 'file';
+  }
 
   var bytes   = Utilities.base64Decode(params.base64data);
   var blob    = Utilities.newBlob(bytes, params.mime_type || 'application/octet-stream', params.filename);

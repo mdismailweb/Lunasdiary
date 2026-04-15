@@ -156,6 +156,14 @@ export default function JournalPage() {
     // Media upload helpers
     const uploadMedia = async (file, mediaType) => {
         if (!active || !file) return;
+
+        // Safety fallback if mediaType is missing
+        if (!mediaType) {
+            if (file.type.includes('image')) mediaType = 'image';
+            else if (file.type.includes('audio')) mediaType = 'audio';
+            else mediaType = 'file';
+        }
+
         setSavingMedia(true);
         setSavedAt('Uploading media...');
         try {
