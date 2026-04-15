@@ -64,7 +64,7 @@ export default function JournalPage() {
             location: entry.location || '',
             tags: entry.tags ? entry.tags.split(',').filter(Boolean) : [],
             title: entry.title || '',
-            date: entry.date || new Date().toISOString().split('T')[0],
+            date: api.sanitizeDate(entry.date),
             audio_refs: entry.audio_refs || '',
             image_refs: entry.image_refs || '',
             file_refs: entry.file_refs || '',
@@ -88,10 +88,10 @@ export default function JournalPage() {
     };
 
     const newEntry = async (dateOverride = null) => {
-        const targetDate = dateOverride || new Date().toISOString().split('T')[0];
+        const targetDate = dateOverride || api.getLocalDate();
         
         // Check if entry already exists for this date
-        const existingEntry = entries.find(e => String(e.date).substring(0, 10) === targetDate);
+        const existingEntry = entries.find(e => api.sanitizeDate(e.date) === targetDate);
         if (existingEntry) {
             openEntry(existingEntry);
             return;
@@ -250,7 +250,7 @@ export default function JournalPage() {
     const wc = draft.text_content ? draft.text_content.trim().split(/\s+/).filter(Boolean).length : 0;
     
     // Determine the active date string for the calendar
-    const activeDateStr = draft.date || (active?.date ? String(active.date).substring(0, 10) : null);
+    const activeDateStr = draft.date || (active?.date ? api.sanitizeDate(active.date) : null);
 
     return (
         <div className={`journal-layout ${mobileView}-view`} style={{ height: 'calc(100vh - var(--player-h) - 0px)' }}>
@@ -327,7 +327,7 @@ export default function JournalPage() {
                                             title="Delete entry"
                                         >✕</button>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingRight: '1.5rem' }}>
-                                            <span className="entry-card-date">{String(entry.date).substring(0, 10)}</span>
+                                            <span className="entry-card-date">{api.sanitizeDate(entry.date)}</span>
                                             <span className="entry-card-mood">{entry.mood === 'happy' ? '😊' : entry.mood === 'calm' ? '😌' : entry.mood === 'excited' ? '🤩' : entry.mood === 'sad' ? '😔' : entry.mood === 'anxious' ? '😰' : entry.mood || '😐'}</span>
                                         </div>
                                         {entry.title && <div className="entry-card-title">{entry.title}</div>}

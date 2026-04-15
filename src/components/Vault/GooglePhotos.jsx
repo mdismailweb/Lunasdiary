@@ -321,7 +321,11 @@ export default function GooglePhotos({ activeTab, folders, onTabChange }) {
 
     const fetchFolder = async (folder, isLoadMore = false) => {
         const cacheKey = `luna_vault_cache_${folder.folderId}`;
-        const currentData = folderCache[folder.folderId] || { items: [], nextToken: null };
+        // If we are online and not loading more, we explicitly ignore any stale memory cache
+        // because we want a fresh skeleton load.
+        const currentData = (navigator.onLine && !isLoadMore) 
+            ? { items: [], nextToken: null } 
+            : (folderCache[folder.folderId] || { items: [], nextToken: null });
 
         // ─── Instant Loading Fix ───────────────────────────────
         // If we have nothing but there's a preloader cache, show it now (Offline Only)

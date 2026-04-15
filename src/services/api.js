@@ -202,7 +202,22 @@ export function fileToBase64(file) {
     });
 }
 
-// ─── Helper: today string ────────────────────────────────────
-export function todayStr() {
-    return new Date().toISOString().split('T')[0];
+// ─── Helper: Local Date Utilities ───────────────────────────
+export function getLocalDate(date = new Date()) {
+    const d = new Date(date);
+    const offset = d.getTimezoneOffset();
+    const localDate = new Date(d.getTime() - (offset * 60 * 1000));
+    return localDate.toISOString().split('T')[0];
 }
+
+export function sanitizeDate(dateStr) {
+    if (!dateStr) return getLocalDate();
+    // If it's a full ISO string, take only the date part
+    if (String(dateStr).includes('T')) {
+        return String(dateStr).split('T')[0];
+    }
+    // If it's already YYYY-MM-DD but long, truncate
+    return String(dateStr).substring(0, 10);
+}
+
+export const todayStr = () => getLocalDate();

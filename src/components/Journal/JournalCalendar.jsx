@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { getLocalDate, sanitizeDate } from '../../services/api';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -15,7 +16,7 @@ export default function JournalCalendar({ entries = [], onSelect, activeDate }) 
         const map = {};
         entries.forEach(e => {
             if (e.date) {
-                const d = String(e.date).substring(0, 10);
+                const d = sanitizeDate(e.date);
                 map[d] = e;
             }
         });
@@ -38,7 +39,7 @@ export default function JournalCalendar({ entries = [], onSelect, activeDate }) 
             dateStr,
             hasEntry: !!entryMap[dateStr],
             entry: entryMap[dateStr],
-            isToday: dateStr === today.toISOString().split('T')[0]
+            isToday: dateStr === getLocalDate()
         });
     }
 
