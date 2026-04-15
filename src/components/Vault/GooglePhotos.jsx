@@ -273,14 +273,16 @@ export default function GooglePhotos({ activeTab, folders, onTabChange }) {
 
     // Load liked images from Sheets on mount + Instant Loading Cache
     useEffect(() => {
-        // 1. Instant Loading from Cache
-        const cached = localStorage.getItem('luna_vault_liked_cache');
-        if (cached) {
-            try {
-                const parsed = JSON.parse(cached);
-                setLiked(parsed.items || []);
-                setInitLoading(false);
-            } catch (e) { }
+        // 1. Instant Loading from Cache (Offline Only)
+        if (!navigator.onLine) {
+            const cached = localStorage.getItem('luna_vault_liked_cache');
+            if (cached) {
+                try {
+                    const parsed = JSON.parse(cached);
+                    setLiked(parsed.items || []);
+                    setInitLoading(false);
+                } catch (e) { }
+            }
         }
 
         // 2. Refresh from Sheets
@@ -304,7 +306,16 @@ export default function GooglePhotos({ activeTab, folders, onTabChange }) {
         const folder = folders?.find(f => f.id === activeTab);
         setFaceMode('grid');
         setScannedGroups([]);
-        if (!folder || folderCache[folder.folderId]) return;
+        if (!folder) return;
+
+        if (navigator.onLine) {
+            // Force clear the memory cache to ensure skeleton loading
+            setFolderCache(c => { const n = { ...c }; delete n[folder.folderId]; return n; });
+        } else if (folderCache[folder.folderId]) {
+            // Offline: use memory cache if we have it
+            return;
+        }
+
         fetchFolder(folder);
     }, [activeTab, folders]);
 
@@ -313,8 +324,8 @@ export default function GooglePhotos({ activeTab, folders, onTabChange }) {
         const currentData = folderCache[folder.folderId] || { items: [], nextToken: null };
 
         // ─── Instant Loading Fix ───────────────────────────────
-        // If we have nothing but there's a preloader cache, show it now
-        if (!isLoadMore && currentData.items.length === 0) {
+        // If we have nothing but there's a preloader cache, show it now (Offline Only)
+        if (!isLoadMore && currentData.items.length === 0 && !navigator.onLine) {
             const cached = localStorage.getItem(cacheKey);
             if (cached) {
                 try {
@@ -332,7 +343,7 @@ export default function GooglePhotos({ activeTab, folders, onTabChange }) {
         }
 
         // Only show skeleton if we have literally zero items (even from cache)
-        const hasNoData = currentData.items.length === 0 && !localStorage.getItem(cacheKey);
+        const hasNoData = currentData.items.length === 0 && (!navigator.onLine ? !localStorage.getItem(cacheKey) : true);
         if (hasNoData || isLoadMore) setLoading(true);
 
         setError(null);

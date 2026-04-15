@@ -105,12 +105,14 @@ function VaultPage() {
             })
             .catch(() => {
                 // Offline: load from cache
-                const cached = localStorage.getItem('vault_folders_cache');
-                if (cached) {
-                    try {
-                        const { folders: cachedFolders } = JSON.parse(cached);
-                        setFolders(cachedFolders);
-                    } catch (e) { console.warn('Cache error:', e); }
+                if (!navigator.onLine) {
+                    const cached = localStorage.getItem('vault_folders_cache');
+                    if (cached) {
+                        try {
+                            const { folders: cachedFolders } = JSON.parse(cached);
+                            setFolders(cachedFolders);
+                        } catch (e) { console.warn('Cache error:', e); }
+                    }
                 }
             })
             .finally(() => setLoadingFolders(false));
