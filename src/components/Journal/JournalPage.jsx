@@ -194,8 +194,16 @@ export default function JournalPage() {
         }
     };
 
-    const handleRemoveMedia = async (mediaId) => {
-        if (!active) return;
+    const handleRemoveMedia = async (mediaOrId) => {
+        if (!active || !mediaOrId) return;
+        
+        // Robustly extract the ID if an object was passed instead of a string
+        const mediaId = (typeof mediaOrId === 'object') ? (mediaOrId.media_id || mediaOrId.id) : mediaOrId;
+        if (!mediaId) {
+            console.error('[Media] Invalid mediaId:', mediaOrId);
+            return;
+        }
+
         const idStr = String(mediaId).trim();
 
         if (!window.confirm('Permanently delete this media file?')) return;
