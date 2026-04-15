@@ -2404,8 +2404,16 @@ function getMediaThumbnailBase64(params) {
     
     var fileId = media.drive_file_id;
     var file = DriveApp.getFileById(fileId);
-    var blob = file.getBlob();
-    var base64 = Utilities.base64Encode(blob.getBytes());
+    
+    // Use getThumbnail() to fetch a small, pre-scaled version (fast and safe)
+    // Fallback to getBlob() only if thumbnailing is unavailable
+    var blob = file.getThumbnail() || file.getBlob();
+    var bytes = blob.getBytes();
+    
+    // Check if even the thumbnail is too large for GAS response limits (~10MB)
+    if (bytes.length > 9 * 1024 * 1024) throw new Error('File thumbnail too large for server-side processing');
+    
+    var base64 = Utilities.base64Encode(bytes);
     return {
       media_id: params.media_id,
       mime_type: blob.getContentType(),
