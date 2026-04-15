@@ -194,57 +194,42 @@ export default function JournalPage() {
         }
     };
 
-    const handleRemoveMedia = (mediaId) => {
+    const handleRemoveMedia = async (mediaId) => {
         if (!active) return;
         const idStr = String(mediaId).trim();
-        console.log(`[Media] Attempting to remove ID: "${idStr}"`);
 
-        setDraft(currentDraft => {
-            const newDraft = { ...currentDraft };
-            let typeKey = '';
+        if (!window.confirm('Permanently delete this media file?')) return;
 
-            const removeIdFromRef = (refStr) => {
-                if (!refStr) return '';
-                return refStr.split(',')
-                    .map(id => String(id).trim())
-                    .filter(id => id && id !== idStr)
-                    .join(',');
-            };
-
-            const imgRefs = removeIdFromRef(currentDraft.image_refs);
-            if (imgRefs !== (currentDraft.image_refs || '')) {
-                newDraft.image_refs = imgRefs;
-                typeKey = 'images';
-            }
-
-            const audRefs = removeIdFromRef(currentDraft.audio_refs);
-            if (audRefs !== (currentDraft.audio_refs || '')) {
-                newDraft.audio_refs = audRefs;
-                typeKey = 'audio';
-            }
-
-            const filRefs = removeIdFromRef(currentDraft.file_refs);
-            if (filRefs !== (currentDraft.file_refs || '')) {
-                newDraft.file_refs = filRefs;
-                typeKey = 'files';
-            }
-
-            if (!typeKey) {
-                console.warn(`[Media] ID "${idStr}" not found in any ref fields.`);
-                return currentDraft;
-            }
-
+        console.log(`[Media] Deleting media ID: "${idStr}"`);
+        
+        // 1. Permanently delete from backend (Drive & Sheet)
+        try {
+            await api.deleteMedia({ media_id: idStr });
+            
+            // 2. Update local UI state
             setMediaItems(prev => ({
-                ...prev,
-                [typeKey]: prev[typeKey].filter(m => String(m.media_id).trim() !== idStr)
+                audio: prev.audio.filter(m => String(m.media_id).trim() !== idStr),
+                images: prev.images.filter(m => String(m.media_id).trim() !== idStr),
+                files: prev.files.filter(m => String(m.media_id).trim() !== idStr)
             }));
 
-            setSavedAt('Saving removal...');
-            clearTimeout(autoSaveTimer.current);
-            autoSaveTimer.current = setTimeout(() => doSave(newDraft), 1000);
+            // 3. Update the local draft to remove the reference
+            setDraft(currentDraft => {
+                const newDraft = { ...currentDraft };
+                const removeIdFromRef = (refStr) => (refStr || '').split(',').map(s => s.trim()).filter(id => id && id !== idStr).join(',');
+                
+                newDraft.image_refs = removeIdFromRef(currentDraft.image_refs);
+                newDraft.audio_refs = removeIdFromRef(currentDraft.audio_refs);
+                newDraft.file_refs = removeIdFromRef(currentDraft.file_refs);
+                
+                return newDraft;
+            });
 
-            return newDraft;
-        });
+            setSavedAt('Media deleted');
+        } catch (e) {
+            console.error('[Media] Delete failed:', e);
+            alert('Failed to delete media: ' + e.message);
+        }
     };
 
     if (loading) return (

@@ -4,7 +4,7 @@
 // through this file. Set your deployment URL below.
 // ============================================================
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyw1q-VqgHq4DJTi9Hh1ncN33UgwTU3XL01-Xyk2_luhsmt0rRQ4Mh6KbUxHY-mG9cY/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4BdTdF6tdVYk51W0K4Zsng6Xo4VU3VOdcI5GNXW4RrH3rVeWg5BIgqmdaLoYwoAT8/exec';
 
 async function _call(action, params = {}) {
     console.log(`[API Request] ${action}`, params);
