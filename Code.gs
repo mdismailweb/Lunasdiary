@@ -1254,9 +1254,31 @@ function updateMediaRefs(params) {
 }
 
 function deleteMedia(params) {
-  if (!params.media_id) throw new Error('media_id required');
-  var row = _sheetToObjects(S.MEDIA).find(function(r) { return r.media_id === params.media_id; });
-  if (!row) throw new Error('Media not found: ' + params.media_id);
+  // Robustly extract media_id
+  var mediaId = params.media_id;
+  if (typeof mediaId === 'object' && mediaId !== null) {
+    mediaId = mediaId.media_id || mediaId.id;
+  }
+  
+  if (!mediaId) {
+    throw new Error('media_id required. Received params: ' + JSON.stringify(params));
+  }
+
+  var rows = _sheetToObjects(S.MEDIA);
+  var foundRowIdx = -1;
+  var row = null;
+  
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i].media_id).trim() === String(mediaId).trim()) {
+      row = rows[i];
+      foundRowIdx = i;
+      break;
+    }
+  }
+
+  if (!row) {
+    throw new Error('Media not found for ID: ' + mediaId + '. Search space size: ' + rows.length);
+  }
 
   // Delete from Drive
   try {
