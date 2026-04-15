@@ -174,7 +174,7 @@ function AudioBox({ items = [], onUpload, onRecord, onRemove }) {
                 )}
                 <label className="btn btn-ghost btn-sm" style={{ cursor: 'pointer' }}>
                     ⬆ Upload
-                    <input type="file" accept="audio/*" hidden onChange={e => onUpload && onUpload(e.target.files[0])} />
+                    <input type="file" accept="audio/*" hidden onChange={e => onUpload && onUpload(e.target.files[0], 'audio')} />
                 </label>
             </div>
         </div>
@@ -197,11 +197,11 @@ function ImagesBox({ items = [], onUpload, onRemove }) {
             <div style={{ display: 'flex', gap: 6 }}>
                 <label className="btn btn-ghost btn-sm" style={{ cursor: 'pointer' }}>
                     📷 Capture
-                    <input type="file" accept="image/*" capture="environment" hidden onChange={e => onUpload && onUpload(e.target.files[0])} />
+                    <input type="file" accept="image/*" capture="environment" hidden onChange={e => onUpload && onUpload(e.target.files[0], 'image')} />
                 </label>
                 <label className="btn btn-ghost btn-sm" style={{ cursor: 'pointer' }}>
                     ⬆ Upload
-                    <input type="file" accept="image/*" hidden onChange={e => onUpload && onUpload(e.target.files[0])} />
+                    <input type="file" accept="image/*" hidden onChange={e => onUpload && onUpload(e.target.files[0], 'image')} />
                 </label>
             </div>
             {lb !== null && (
@@ -244,7 +244,7 @@ function FilesBox({ items = [], onUpload, onRemove }) {
             </div>
             <label className="btn btn-ghost btn-sm" style={{ cursor: 'pointer' }}>
                 ⬆ Upload
-                <input type="file" hidden onChange={e => onUpload && onUpload(e.target.files[0])} />
+                <input type="file" hidden onChange={e => onUpload && onUpload(e.target.files[0], 'file')} />
             </label>
         </div>
     );
