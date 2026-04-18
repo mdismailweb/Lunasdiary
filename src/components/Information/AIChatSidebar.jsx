@@ -22,6 +22,10 @@ const SendIcon = () => (
     </svg>
 );
 
+// Module-level cache maps article IDs to Promises of the summary payload.
+// This prevents StrictMode double-bouncing and avoids burning API quota.
+const summaryCache = new Map();
+
 export default function AIChatSidebar({ article, articleHtml, onClose }) {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
@@ -39,16 +43,31 @@ export default function AIChatSidebar({ article, articleHtml, onClose }) {
     }, [messages, loading]);
 
     useEffect(() => {
+        let isMounted = true;
         const fetchSummary = async () => {
             setLoading(true);
             setMessages([]);
-            try {
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = articleHtml || article.snippet;
-                const rawText = (tempDiv.textContent || tempDiv.innerText || '').trim();
-                setArticleContext(rawText);
 
-                const initialPrompt = `You are Luna, an advanced AI research assistant embedded in Lunasdiary — a personal knowledge & journal app. The user is a research student who wants deep, structured, academically rigorous analysis of articles they read.
+            // If we already fetched (or are fetching) this article summary, reuse the promise
+            if (summaryCache.has(article.id)) {
+                try {
+                    const cachedMsgs = await summaryCache.get(article.id);
+                    if (isMounted) {
+                        setMessages(cachedMsgs);
+                        setLoading(false);
+                    }
+                } catch (e) {
+                    // Fallthrough to retry on error
+                }
+                return;
+            }
+
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = articleHtml || article.snippet;
+            const rawText = (tempDiv.textContent || tempDiv.innerText || '').trim();
+            setArticleContext(rawText);
+
+            const initialPrompt = `You are Luna, an advanced AI research assistant embedded in Lunasdiary — a personal knowledge & journal app. The user is a research student who wants deep, structured, academically rigorous analysis of articles they read.
 
 Article Title: "${article.title}"
 
@@ -86,18 +105,33 @@ List 5–8 technical terms or concepts from the article with a one-line definiti
 After completing the brief, add a short line at the bottom:
 *Ask me anything to go deeper — I have the full article context.*`;
 
-                const history = [{ role: 'user', parts: [{ text: initialPrompt }] }];
-                const responseText = await generateChatResponse(history);
-                setMessages([{ role: 'model', text: responseText }]);
+            const history = [{ role: 'user', parts: [{ text: initialPrompt }] }];
+            
+            // Create the promise and immediately store it in the cache to prevent Strict Mode double-fire
+            const fetchPromise = generateChatResponse(history).then(responseText => {
+                return [{ role: 'model', text: responseText }];
+            });
+            
+            summaryCache.set(article.id, fetchPromise);
+
+            try {
+                const finalMsgs = await fetchPromise;
+                if (isMounted) setMessages(finalMsgs);
             } catch (err) {
-                setMessages([{ role: 'model', text: `I wasn't able to summarize this article. This might be due to an API error or the article content was too short.\n\n**Error:** ${err.message}` }]);
+                summaryCache.delete(article.id); // clear failed cache so they can retry
+                if (isMounted) {
+                    setMessages([{ role: 'model', text: `I wasn't able to summarize this article. This might be due to an API error or the article content was too short.\n\n**Error:** ${err.message}` }]);
+                }
             } finally {
-                setLoading(false);
-                setTimeout(() => inputRef.current?.focus(), 100);
+                if (isMounted) {
+                    setLoading(false);
+                    setTimeout(() => inputRef.current?.focus(), 100);
+                }
             }
         };
         fetchSummary();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        return () => { isMounted = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [article.id]);
 
     const handleSend = async (e) => {
@@ -157,6 +191,17 @@ After completing the brief, add a short line at the bottom:
                 <span className="ai-article-pill-icon">📄</span>
                 <span className="ai-article-pill-text">{article.title}</span>
             </div>
+
+            {/* Hero image */}
+            {article.image && (
+                <div className="ai-hero-image">
+                    <img
+                        src={article.image}
+                        alt={article.title}
+                        onError={e => e.target.parentElement.style.display = 'none'}
+                    />
+                </div>
+            )}
 
             {/* Messages */}
             <div className="ai-messages-pane">

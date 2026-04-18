@@ -115,6 +115,33 @@
     line-height: 1.3;
 }
 
+/* ── Hero image ──────────────────────────────────────────────── */
+.ai-hero-image {
+    width: 100%;
+    height: 200px;
+    flex-shrink: 0;
+    overflow: hidden;
+    position: relative;
+}
+
+.ai-hero-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.ai-hero-image::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60%;
+    background: linear-gradient(to bottom, transparent, #13131f);
+    pointer-events: none;
+}
+
 /* ── Messages pane ────────────────────────────────────────────── */
 .ai-messages-pane {
     flex: 1;

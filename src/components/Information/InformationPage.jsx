@@ -69,6 +69,13 @@ export default function InformationPage() {
                 if (enclosure) image = enclosure.getAttribute('url');
                 const mediaThumbnail = item.getElementsByTagName('media:thumbnail')[0];
                 if (!image && mediaThumbnail) image = mediaThumbnail.getAttribute('url');
+                const mediaContent = item.getElementsByTagName('media:content')[0];
+                if (!image && mediaContent) image = mediaContent.getAttribute('url');
+                // Try to find an image inside the HTML content
+                if (!image && htmlContent) {
+                    const imgMatch = htmlContent.match(/<img[^>]+src=["']([^"']+)["']/i);
+                    if (imgMatch) image = imgMatch[1];
+                }
 
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = description;
@@ -225,6 +232,11 @@ export default function InformationPage() {
                                             className={`article-card ${activeAIArticle?.id === article.id ? 'active-ai' : ''}`}
                                             onClick={() => handleCardClick(article)}
                                         >
+                                            {article.image && (
+                                                <div className="article-thumbnail">
+                                                    <img src={article.image} alt={article.title} loading="lazy" onError={e => e.target.parentElement.style.display='none'} />
+                                                </div>
+                                            )}
                                             <span className="article-tag">{activeFeed.name}</span>
                                             <h3 className="article-title">{article.title}</h3>
                                             <p className="article-snippet">{article.snippet}</p>
