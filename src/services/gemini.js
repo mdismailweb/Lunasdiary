@@ -32,6 +32,7 @@ export async function generateChatResponse(history) {
     } catch (err) {
         console.error("Gemini API Error:", err);
         throw err;
+    }
 }
 
 const GEMINI_MODEL = 'gemini-1.5-flash';
