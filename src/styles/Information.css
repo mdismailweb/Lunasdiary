@@ -332,3 +332,49 @@
         padding: 1rem;
     }
 }
+
+/* Article Viewer Modal */
+.article-viewer-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--surface);
+    z-index: 3000;
+    display: flex;
+    flex-direction: column;
+    animation: slide-up 0.3s ease;
+}
+
+.article-viewer-header {
+    height: 60px;
+    background: var(--surface-light, #1e1e2d);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+}
+
+.article-viewer-title {
+    font-size: 1rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60%;
+    color: var(--text-primary);
+}
+
+.article-viewer-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.article-viewer-iframe {
+    flex: 1;
+    width: 100%;
+    border: none;
+    background: #ffffff; /* News sites expect white bg */
+}

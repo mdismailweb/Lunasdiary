@@ -8,6 +8,7 @@ export default function InformationPage() {
     const [feeds, setFeeds] = useState([]);
     const [activeFeed, setActiveFeed] = useState(null);
     const [articles, setArticles] = useState([]);
+    const [activeArticle, setActiveArticle] = useState(null);
     const [loading, setLoading] = useState(true);
     const [fetchingFeed, setFetchingFeed] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -187,21 +188,20 @@ export default function InformationPage() {
                             ) : articles.length > 0 ? (
                                 <div className="feed-grid fade-in">
                                     {articles.map(article => (
-                                        <a 
+                                        <div 
                                             key={article.id} 
-                                            href={article.link} 
-                                            target="_blank" 
-                                            rel="noopener noreferrer" 
+                                            onClick={() => setActiveArticle(article)}
                                             className="article-card"
+                                            style={{ cursor: 'pointer' }}
                                         >
                                             <span className="article-tag">{activeFeed.name}</span>
                                             <h3 className="article-title">{article.title}</h3>
                                             <p className="article-snippet">{article.snippet}</p>
                                             <div className="article-footer">
                                                 <span className="article-date">📅 {article.date}</span>
-                                                <span className="read-more">Read Full →</span>
+                                                <span className="read-more">Read in App →</span>
                                             </div>
-                                        </a>
+                                        </div>
                                     ))}
                                 </div>
                             ) : (
@@ -265,6 +265,29 @@ export default function InformationPage() {
                             </div>
                         </form>
                     </div>
+                </div>
+            )}
+
+            {/* Article Viewer Modal */}
+            {activeArticle && (
+                <div className="article-viewer-overlay">
+                    <div className="article-viewer-header">
+                        <button className="btn btn-secondary btn-sm" onClick={() => setActiveArticle(null)}>
+                            ← Back to Feed
+                        </button>
+                        <div className="article-viewer-title">{activeArticle.title}</div>
+                        <div className="article-viewer-actions">
+                            <a href={activeArticle.link} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm">
+                                Open in Browser ↗
+                            </a>
+                        </div>
+                    </div>
+                    <iframe 
+                        src={activeArticle.link} 
+                        className="article-viewer-iframe"
+                        title={activeArticle.title}
+                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                    />
                 </div>
             )}
 
