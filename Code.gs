@@ -43,7 +43,8 @@ var S = {
   NOTIFICATIONS:       'NOTIFICATIONS',
   LOGS: 'LOGS',
   YT_LIKED: 'YT_LIKED',
-  TWITCH_LIKED: 'TWITCH_LIKED'
+  TWITCH_LIKED: 'TWITCH_LIKED',
+  RSS_FEEDS: 'RSS_FEEDS'
 };
 
 // Drive root folder name
@@ -248,6 +249,11 @@ function doPost(e) {
       case 'saveNotification':    result = saveNotification(params);         break;
       case 'deleteNotification':  result = deleteNotification(params);       break;
       case 'checkNewContent':     result = checkNewContent(params);          break;
+      
+      // ── RSS Feeds ──
+      case 'getRssFeeds':         result = getRssFeeds();                    break;
+      case 'saveRssFeed':         result = saveRssFeed(params);              break;
+      case 'removeRssFeed':       result = removeRssFeed(params);            break;
 
       default:
         result = { error: 'Unknown action: ' + action };
@@ -558,6 +564,7 @@ function initializeApp() {
   sheetDefs[S.VAULT_FOLDERS] = ['ID', 'Name', 'FolderID', 'FaceGroupsJSON', 'CreatedAt'];
   sheetDefs[S.VAULT_FACES] = ['FolderID', 'GroupID', 'Label', 'CoverImageID', 'MemberImageIDs', 'CreatedAt'];
   sheetDefs[S.NOTIFICATIONS] = ['id', 'label', 'time', 'days', 'message', 'enabled', 'type', 'last_triggered', 'updatedAt'];
+  sheetDefs[S.RSS_FEEDS]     = ['id', 'url', 'name', 'category', 'icon', 'added_at', 'updatedAt'];
 
   var created = [];
   Object.keys(sheetDefs).forEach(function(name) {
@@ -616,6 +623,26 @@ function initializeApp() {
     presets.forEach(function(p) {
       p.updatedAt = _now();
       _appendRow(S.NOTIFICATIONS, p);
+    });
+  }
+
+  // ── Pre-seed RSS Feeds if empty ──
+  var rssSheet = ss.getSheetByName(S.RSS_FEEDS);
+  if (rssSheet && rssSheet.getLastRow() < 2) {
+    var rssPresets = [
+      { id: 'rss-001', url: 'https://www.theverge.com/rss/index.xml', name: 'The Verge', category: 'Technology', icon: '🌐' },
+      { id: 'rss-002', url: 'https://techcrunch.com/feed/', name: 'TechCrunch', category: 'Technology', icon: '🚀' },
+      { id: 'rss-003', url: 'https://news.ycombinator.com/rss', name: 'Hacker News', category: 'Technology', icon: '🛡️' },
+      { id: 'rss-004', url: 'https://feeds.arstechnica.com/arstechnica/index', name: 'Ars Technica', category: 'Technology', icon: '🧬' },
+      { id: 'rss-005', url: 'https://www.nasa.gov/rss/dyn/breaking_news.rss', name: 'NASA Breaking News', category: 'Science', icon: '🚀' },
+      { id: 'rss-006', url: 'https://www.scientificamerican.com/section/rss/science/', name: 'Scientific American', category: 'Science', icon: '🔬' },
+      { id: 'rss-007', url: 'https://www.nature.com/nature.rss', name: 'Nature', category: 'Science', icon: '🌿' },
+      { id: 'rss-008', url: 'https://www.sciencedaily.com/rss/all.xml', name: 'ScienceDaily', category: 'Science', icon: '📊' }
+    ];
+    rssPresets.forEach(function(p) {
+      p.added_at = _now();
+      p.updatedAt = _now();
+      _appendRow(S.RSS_FEEDS, p);
     });
   }
 
@@ -2607,4 +2634,46 @@ function checkNewContent(params) {
   });
 
   return results;
+}
+
+// ---------------------------------------------------------------
+// RSS FEED ACTIONS
+// ---------------------------------------------------------------
+
+function getRssFeeds() {
+  var sheet = _ss().getSheetByName(S.RSS_FEEDS);
+  if (!sheet) {
+    initializeApp();
+  }
+  return _sheetToObjects(S.RSS_FEEDS);
+}
+
+function saveRssFeed(params) {
+  var id = params.id || 'rss-' + Date.now();
+  var item = {
+    id: id,
+    url: params.url || '',
+    name: params.name || '',
+    category: params.category || 'Other',
+    icon: params.icon || '📰',
+    added_at: params.added_at || _now(),
+    updatedAt: _now()
+  };
+  
+  var row = _findRow(S.RSS_FEEDS, 'id', id);
+  if (row > 0) {
+    _updateRow(S.RSS_FEEDS, 'id', id, item);
+  } else {
+    _appendRow(S.RSS_FEEDS, item);
+  }
+  return item;
+}
+
+function removeRssFeed(params) {
+  if (!params.id) throw new Error('ID required');
+  var row = _findRow(S.RSS_FEEDS, 'id', params.id);
+  if (row > 0) {
+    _sheet(S.RSS_FEEDS).deleteRow(row);
+  }
+  return { success: true };
 }

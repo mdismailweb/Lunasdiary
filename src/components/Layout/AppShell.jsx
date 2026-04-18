@@ -68,6 +68,7 @@ export default function AppShell({ activeTab, onNavigate, userName, isOffline, p
                     preload={preload}
                     isOpen={isMenuOpen}
                     onClose={() => setIsMenuOpen(false)}
+                    onMusicClick={handleMusicClick}
                 />
 
                 <main className="content-area tab-enter" key={activeTab}>

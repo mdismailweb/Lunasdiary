@@ -1,3 +1,5 @@
+import { useAudio } from '../../context/AudioContext';
+
 const TABS = [
     { id: 'dashboard', icon: '🌸', label: 'Dashboard' },
     { id: 'journal', icon: '📖', label: 'Journal' },
@@ -20,10 +22,13 @@ const TABS = [
     { id: 'yearlyreview', icon: '🎆', label: 'Yearly Review' },
     { id: 'twitch', icon: '🎮', label: 'Twitch' },
     { id: 'delegation', icon: '🤝', label: 'Delegation' },
+    { id: 'information', icon: '📰', label: 'Information' },
     { id: 'notifications', icon: '🔔', label: 'Notifications' },
 ];
 
-export default function Sidebar({ active, onNavigate, userName, isOffline, onPreload, preload, isOpen, onClose }) {
+export default function Sidebar({ active, onNavigate, userName, isOffline, onPreload, preload, isOpen, onClose, onMusicClick }) {
+    const { playing } = useAudio();
+
     return (
         <>
             {/* Mobile Drawer Overlay */}
@@ -62,7 +67,16 @@ export default function Sidebar({ active, onNavigate, userName, isOffline, onPre
                     <img src="/profile.jpg" alt="Profile" className="profile-avatar-xs" />
                     <span className="user-name">{userName || 'You'}</span>
                 </div>
-                <button className="settings-btn" title="Settings">⚙️</button>
+                <div className="sidebar-footer-actions">
+                    <button 
+                        className={`sidebar-music-btn ${playing ? 'is-playing' : ''}`} 
+                        onClick={onMusicClick}
+                        title="Music Player"
+                    >
+                        💿
+                    </button>
+                    <button className="settings-btn" title="Settings">⚙️</button>
+                </div>
             </div>
         </aside>
         </>

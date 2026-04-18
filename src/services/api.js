@@ -4,7 +4,7 @@
 // through this file. Set your deployment URL below.
 // ============================================================
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyuJ4EeUZzbQEI738wSIEUd8ghJ_EvC2pDskyR9MAzaYtxy8A3nHJjySshLQRTWEj8b/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxHxR7E2cKcSSBuLjLVxdH-Q_mMnBd7AQ2UjgnsbulNDYqgm6Ao-8RjbumUSCrH_npX/exec';
 
 async function _call(action, params = {}) {
     console.log(`[API Request] ${action}`, params);
@@ -190,6 +190,9 @@ export const getNotifications = () => _call('getNotifications');
 export const saveNotification = (params) => _call('saveNotification', params);
 export const deleteNotification = (id) => _call('deleteNotification', { id });
 export const checkNewContent = (lastCheck) => _call('checkNewContent', { lastCheck });
+export const getRssFeeds = () => _call('getRssFeeds');
+export const saveRssFeed = (params) => _call('saveRssFeed', params);
+export const removeRssFeed = (id) => _call('removeRssFeed', { id });
 
 
 
