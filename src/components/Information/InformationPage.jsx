@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as api from '../../services/api';
+import { Readability } from '@mozilla/readability';
+import DOMPurify from 'dompurify';
 import '../../styles/Information.css';
 
 const PROXY = 'https://corsproxy.io/?';
@@ -9,6 +11,7 @@ export default function InformationPage() {
     const [activeFeed, setActiveFeed] = useState(null);
     const [articles, setArticles] = useState([]);
     const [activeArticle, setActiveArticle] = useState(null);
+    const [isFetchingArticle, setIsFetchingArticle] = useState(false);
     const [loading, setLoading] = useState(true);
     const [fetchingFeed, setFetchingFeed] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -97,6 +100,32 @@ export default function InformationPage() {
             fetchArticles(activeFeed);
         }
     }, [activeFeed, fetchArticles]);
+
+    const handleReadArticle = async (article) => {
+        setActiveArticle(article);
+        setIsFetchingArticle(true);
+        try {
+            const response = await fetch(`${PROXY}${encodeURIComponent(article.link)}`);
+            const htmlText = await response.text();
+            
+            // Parse raw HTML using DOMParser
+            const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+            
+            // Extract the core article using Readability
+            const parsed = new Readability(doc).parse();
+            
+            if (parsed && parsed.content) {
+                // Sanitize the HTML before injecting
+                const cleanHtml = DOMPurify.sanitize(parsed.content, { USE_PROFILES: { html: true } });
+                setActiveArticle({ ...article, fullHtml: cleanHtml });
+            }
+        } catch (err) {
+            console.error('Failed to extract full article text:', err);
+            // On failure, it gracefully falls back to the original RSS HTML that was set in fetchArticles
+        } finally {
+            setIsFetchingArticle(false);
+        }
+    };
 
     const handleAddFeed = async (e) => {
         e.preventDefault();
@@ -195,7 +224,7 @@ export default function InformationPage() {
                                     {articles.map(article => (
                                         <div 
                                             key={article.id} 
-                                            onClick={() => setActiveArticle(article)}
+                                            onClick={() => handleReadArticle(article)}
                                             className="article-card"
                                             style={{ cursor: 'pointer' }}
                                         >
@@ -288,10 +317,17 @@ export default function InformationPage() {
                         </div>
                     </div>
                     <div className="article-viewer-body">
-                        <div 
-                            className="article-reader-content fade-in" 
-                            dangerouslySetInnerHTML={{ __html: activeArticle.fullHtml }} 
-                        />
+                        {isFetchingArticle ? (
+                            <div className="empty-feed">
+                                <div className="spinner" />
+                                <p>Extracting article...</p>
+                            </div>
+                        ) : (
+                            <div 
+                                className="article-reader-content fade-in" 
+                                dangerouslySetInnerHTML={{ __html: activeArticle.fullHtml }} 
+                            />
+                        )}
                     </div>
                 </div>
             )}
