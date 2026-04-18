@@ -152,6 +152,35 @@
     height: 100%;
 }
 
+.ai-summarize-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    color: var(--accent);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 10;
+    opacity: 0;
+    transform: translateY(-5px);
+}
+
+.article-card:hover .ai-summarize-btn {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.ai-summarize-btn:hover {
+    background: var(--accent);
+    color: white;
+    transform: scale(1.05) !important;
+}
+
 .article-tag {
     font-size: 0.7rem;
     font-weight: 700;

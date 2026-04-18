@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import * as api from '../../services/api';
 import { Readability } from '@mozilla/readability';
 import DOMPurify from 'dompurify';
+import AIChatSidebar from './AIChatSidebar';
 import '../../styles/Information.css';
 
 const PROXY = 'https://corsproxy.io/?';
@@ -11,6 +12,7 @@ export default function InformationPage() {
     const [activeFeed, setActiveFeed] = useState(null);
     const [articles, setArticles] = useState([]);
     const [activeArticle, setActiveArticle] = useState(null);
+    const [activeAIArticle, setActiveAIArticle] = useState(null);
     const [isFetchingArticle, setIsFetchingArticle] = useState(false);
     const [loading, setLoading] = useState(true);
     const [fetchingFeed, setFetchingFeed] = useState(false);
@@ -117,7 +119,9 @@ export default function InformationPage() {
             if (parsed && parsed.content) {
                 // Sanitize the HTML before injecting
                 const cleanHtml = DOMPurify.sanitize(parsed.content, { USE_PROFILES: { html: true } });
-                setActiveArticle({ ...article, fullHtml: cleanHtml });
+                const finalArticle = { ...article, fullHtml: cleanHtml };
+                setActiveArticle(finalArticle);
+                return finalArticle;
             }
         } catch (err) {
             console.error('Failed to extract full article text:', err);
@@ -125,6 +129,17 @@ export default function InformationPage() {
         } finally {
             setIsFetchingArticle(false);
         }
+        return article;
+    };
+
+    const handleSummarize = async (e, article) => {
+        e.stopPropagation(); // prevent opening reader view
+        // If it doesn't have fullHtml parsed from the website yet, fetch it silently for Gemini
+        let fullArt = article;
+        if (!article.fullHtml || article.fullHtml === article.snippet) {
+             fullArt = await handleReadArticle(article);
+        }
+        setActiveAIArticle(fullArt);
     };
 
     const handleAddFeed = async (e) => {
@@ -228,6 +243,13 @@ export default function InformationPage() {
                                             className="article-card"
                                             style={{ cursor: 'pointer' }}
                                         >
+                                            <button 
+                                                className="ai-summarize-btn"
+                                                onClick={(e) => handleSummarize(e, article)}
+                                                title="Summarize with AI"
+                                            >
+                                                ✨ AI
+                                            </button>
                                             <span className="article-tag">{activeFeed.name}</span>
                                             <h3 className="article-title">{article.title}</h3>
                                             <p className="article-snippet">{article.snippet}</p>
@@ -337,6 +359,15 @@ export default function InformationPage() {
                     {error}
                     <button onClick={() => setError('')} style={{ marginLeft: '10px', background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}>✕</button>
                 </div>
+            )}
+
+            {/* AI Chat Sidebar */}
+            {activeAIArticle && (
+                <AIChatSidebar 
+                    article={activeAIArticle} 
+                    articleHtml={activeAIArticle.fullHtml} 
+                    onClose={() => setActiveAIArticle(null)} 
+                />
             )}
         </div>
     );
