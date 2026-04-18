@@ -9,8 +9,17 @@ const TYPE_ICONS = { audio: '🔊', image: '🖼️', file: '📎', video: '🎬
 export default function MediaLibraryPage() {
     const { media, loading, upload, remove, scan } = useMedia();
     const [filter, setFilter] = useState('all');
-    const [lb, setLb] = useState(null);  // lightbox index
+    const [lb, setLb] = useState(null);
     const [search, setSearch] = useState('');
+
+    const confirmRemove = (item) => {
+        const label = item.display_name || item.filename;
+        const inUse = !!item.referenced_in;
+        const msg = inUse
+            ? `"${label}" is used in a journal entry.\n\nDelete it anyway? This may break the entry's media.`
+            : `Delete "${label}" from the media library?`;
+        if (window.confirm(msg)) remove(item.media_id);
+    };
 
     const filtered = media.filter(m => {
         if (filter !== 'all' && m.media_type !== filter) return false;
@@ -98,11 +107,13 @@ export default function MediaLibraryPage() {
                                                 </div>
                                             )}
                                             {item.is_orphan === 'TRUE' && (
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
-                                                    <span style={{ fontSize: '0.65rem', color: 'var(--warning)' }}>⚠ Orphan</span>
-                                                    <button className="btn btn-danger btn-sm" onClick={e => { e.stopPropagation(); remove(item.media_id); }}>Delete</button>
-                                                </div>
+                                                <span style={{ fontSize: '0.65rem', color: 'var(--warning)' }}>⚠ Orphan</span>
                                             )}
+                                            <button
+                                                className="btn btn-danger btn-sm"
+                                                style={{ marginTop: 4, width: '100%', fontSize: '0.7rem', padding: '2px 6px' }}
+                                                onClick={e => { e.stopPropagation(); confirmRemove(item); }}
+                                            >✕ Delete</button>
                                         </div>
                                     </div>
                                 ))}
@@ -124,12 +135,15 @@ export default function MediaLibraryPage() {
                                                 <span className="badge badge-ref">{item.media_id}</span>
                                                 {' '}{item.file_size_kb}KB · {String(item.upload_date).substring(0, 10)}
                                                 {item.referenced_in && <span style={{ color: 'var(--success)', marginLeft: 6 }}>📎 In use</span>}
+                                                {item.is_orphan === 'TRUE' && <span style={{ color: 'var(--warning)', marginLeft: 6 }}>⚠ Orphan</span>}
                                             </div>
                                         </div>
                                         <a href={item.drive_link} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm">Open ↗</a>
-                                        {item.is_orphan === 'TRUE' && (
-                                            <button className="btn btn-danger btn-sm" onClick={() => remove(item.media_id)}>Delete</button>
-                                        )}
+                                        <button
+                                            className="btn btn-danger btn-sm"
+                                            style={{ flexShrink: 0 }}
+                                            onClick={() => confirmRemove(item)}
+                                        >✕</button>
                                     </div>
                                 ))}
                             </div>

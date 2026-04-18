@@ -41,7 +41,9 @@ var S = {
   DELEGATION:          'DELEGATION',
   LUNASROOM:           'LUNASROOM_LINKS',
   NOTIFICATIONS:       'NOTIFICATIONS',
-  LOGS: 'LOGS'
+  LOGS: 'LOGS',
+  YT_LIKED: 'YT_LIKED',
+  TWITCH_LIKED: 'TWITCH_LIKED'
 };
 
 // Drive root folder name
@@ -139,10 +141,15 @@ function doPost(e) {
       case 'removeYTChannel': result = removeYTChannel(params);  break;
       case 'getYTDismissed':  result = getYTDismissed();         break;
       case 'saveYTDismissed': result = saveYTDismissed(params);  break;
+      case 'getYTLiked':      result = getYTLiked();             break;
+      case 'toggleYTLiked':    result = toggleYTLiked(params);    break;
+      case 'getTwitchLiked':   result = getTwitchLiked();         break;
+      case 'toggleTwitchLiked': result = toggleTwitchLiked(params); break;
       
       case 'getVaultMedia':        result = getVaultMedia(params);         break;
       case 'getVaultFiles':        result = getVaultFiles(params);         break;
       case 'getImageBase64':        result = getImageBase64(params);        break;
+      case 'getFileTextContent':   result = getFileTextContent(params);    break;
 
       // ── Vault Folders & Liked ──
       case 'getVaultFolders':      result = getVaultFolders();              break;
@@ -1509,6 +1516,7 @@ function initYouTubeSync() {
   defs[S_VIDEOS] = ['video_id', 'title', 'channel_title', 'channel_id', 'thumbnail', 'published_at', 'saved_at'];
   defs[S_YT_CHANS] = ['id', 'title', 'thumbnail', 'uploadsId', 'subs', 'added_at'];
   defs[S_YT_DISMISSED] = ['video_id', 'dismissed_at'];
+  defs[S.YT_LIKED] = ['video_id', 'title', 'channel_title', 'thumbnail', 'liked_at'];
 
   Object.keys(defs).forEach(function(name) {
     if (!ss.getSheetByName(name)) {
@@ -1574,6 +1582,30 @@ function saveYTDismissed(params) {
   });
   return { success: true };
 }
+
+// --- Liked Videos Sync ---
+function getYTLiked() {
+  return _sheetToObjects(S.YT_LIKED);
+}
+
+function toggleYTLiked(params) {
+  var sheet = _sheet(S.YT_LIKED);
+  var row = _findRow(S.YT_LIKED, 'video_id', params.video_id);
+  
+  if (row > 0) {
+    sheet.deleteRow(row);
+    return { success: true, removed: true };
+  } else {
+    _appendRow(S.YT_LIKED, {
+      video_id: params.video_id,
+      title: params.title,
+      channel_title: params.channel_title,
+      thumbnail: params.thumbnail,
+      liked_at: _now()
+    });
+    return { success: true, added: true };
+  }
+}
 // ═══════════════════════════════════════════════════════════════
 // VAULT ACTIONS (LINK-BASED)
 // ═══════════════════════════════════════════════════════════════
@@ -1597,7 +1629,14 @@ function getVaultMedia(params) {
       var folder = DriveApp.getFolderById(folderId);
       folderName = folder.getName();
       
-      var query = "'" + folderId + "' in parents and (mimeType contains 'image/' or mimeType contains 'video/')";
+      var query = "'" + folderId + "' in parents and ("
+        + "mimeType contains 'image/' or "
+        + "mimeType contains 'video/' or "
+        + "mimeType contains 'audio/' or "
+        + "mimeType = 'application/pdf' or "
+        + "mimeType contains 'text/' or "
+        + "mimeType = 'application/json'"
+        + ")";
       var filesIterator = DriveApp.searchFiles(query);
       var allFiles = [];
       
@@ -1707,6 +1746,23 @@ function getImageBase64(params) {
   }
 }
 
+// Fetches the raw text content of a Drive file (for text/code viewing in Vault).
+function getFileTextContent(params) {
+  if (!params.fileId) throw new Error('fileId required');
+  try {
+    var file = DriveApp.getFileById(params.fileId);
+    var blob = file.getBlob();
+    var content = blob.getDataAsString('UTF-8');
+    // Truncate to protect against Apps Script response size limits
+    if (content.length > 50000) {
+      content = content.substring(0, 50000) + '\n\n... [File truncated at 50,000 characters]';
+    }
+    return { content: content, mimeType: blob.getContentType(), name: file.getName() };
+  } catch (e) {
+    throw new Error('Could not read file ' + params.fileId + ': ' + e.message);
+  }
+}
+
 // ── VAULT FOLDERS ─────────────────────────────────────────────
 function _getOrCreateSheet(name, headers) {
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -1763,6 +1819,31 @@ function getLikedImages() {
     return { id: String(row[0]), title: String(row[1]), src: String(row[2]), largeSrc: String(row[3]), type: String(row[4]), likedAt: String(row[5]) };
   }).filter(function(l) { return l.id; });
   return { liked: liked };
+}
+
+// ── TWITCH LIKED ──────────────────────────────────────────────
+function getTwitchLiked() {
+  var sheet = _getOrCreateSheet(S.TWITCH_LIKED, ['video_id', 'title', 'user_name', 'thumbnail_url', 'liked_at']);
+  return _sheetToObjects(S.TWITCH_LIKED);
+}
+
+function toggleTwitchLiked(params) {
+  var sheet = _getOrCreateSheet(S.TWITCH_LIKED, ['video_id', 'title', 'user_name', 'thumbnail_url', 'liked_at']);
+  var row = _findRow(S.TWITCH_LIKED, 'video_id', params.video_id);
+  
+  if (row > 0) {
+    sheet.deleteRow(row);
+    return { success: true, removed: true };
+  } else {
+    _appendRow(S.TWITCH_LIKED, {
+      video_id: params.video_id,
+      title: params.title,
+      user_name: params.user_name,
+      thumbnail_url: params.thumbnail_url,
+      liked_at: _now()
+    });
+    return { success: true, added: true };
+  }
 }
 
 function toggleLikedImage(params) {

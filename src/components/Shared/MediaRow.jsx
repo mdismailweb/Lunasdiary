@@ -1,12 +1,21 @@
 import { useState, useRef, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { useAudio } from '../../context/AudioContext';
 import Lightbox from './Lightbox';
 import SmartThumbnail from './SmartThumbnail';
 import * as api from '../../services/api';
 
 function fileTypeIcon(ext) {
-    const map = { pdf: '📄', doc: '📝', docx: '📝', xls: '📊', xlsx: '📊', ppt: '📋', pptx: '📋', txt: '📃', zip: '🗜️' };
+    const map = { pdf: '📄', doc: '📝', docx: '📝', xls: '📊', xlsx: '📊', ppt: '📋', pptx: '📋', txt: '📃', zip: '🗜️', js: '💻', jsx: '💻', ts: '💻', tsx: '💻', py: '🐍', html: '🌐', css: '🎨', json: '📋', md: '📝', sql: '🗄️' };
     return map[ext?.toLowerCase()] || '📎';
+}
+
+function classifyExtension(ext) {
+    const e = (ext || '').toLowerCase().replace('.', '');
+    if (e === 'pdf') return 'pdf';
+    if (['mp3', 'wav', 'm4a', 'ogg', 'flac', 'aac', 'webm'].includes(e)) return 'audio';
+    if (['txt', 'md', 'js', 'jsx', 'ts', 'tsx', 'py', 'html', 'css', 'json', 'xml', 'csv', 'yaml', 'yml', 'sh', 'bash', 'sql', 'php', 'rb', 'go', 'java', 'c', 'cpp', 'h', 'cs', 'swift', 'kt'].includes(e)) return 'text';
+    return 'file';
 }
 
 function getStreamableUrl(url, mode = 'download') {
@@ -14,13 +23,93 @@ function getStreamableUrl(url, mode = 'download') {
     const match = url.match(/\/d\/([^/]+)/) || url.match(/id=([^&/]+)/);
     if (!match) return url;
     const id = match[1];
-    
-    // For images, sz=w1000 is for thumbnails, sz=w2500 is for full-screen previews
     if (mode === 'preview') return `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
     if (mode === 'large') return `https://drive.google.com/thumbnail?id=${id}&sz=w2500`;
-    
-    // docs.google.com/uc is often more reliable for audio/image streaming
     return `https://docs.google.com/uc?id=${id}&export=${mode}`;
+}
+
+// ── File Preview Modal ───────────────────────────────────────────
+function FilePreviewModal({ item, onClose }) {
+    const [textContent, setTextContent] = useState(null);
+    const [textLoading, setTextLoading] = useState(false);
+    const fileType = classifyExtension(item.file_extension);
+
+    useEffect(() => {
+        if (fileType !== 'text' || !item.drive_file_id) return;
+        setTextLoading(true);
+        api.getFileTextContent(item.drive_file_id)
+            .then(res => setTextContent(res?.content || ''))
+            .catch(() => setTextContent('// Could not load file content.'))
+            .finally(() => setTextLoading(false));
+    }, [item.drive_file_id, fileType]);
+
+    return ReactDOM.createPortal(
+        <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(0,0,0,0.92)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)', padding: '20px' }}>
+            <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: '900px', height: '90vh', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
+                    <span style={{ fontSize: '1.2rem' }}>{fileTypeIcon(item.file_extension)}</span>
+                    <span style={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600, fontSize: '0.9rem', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
+                        {item.display_name || item.filename}
+                    </span>
+                    <a href={item.drive_link} target="_blank" rel="noreferrer" style={{ flexShrink: 0, color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', textDecoration: 'none', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '3px 10px' }}>↗ Drive</a>
+                    <button onClick={onClose} style={{ flexShrink: 0, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.15)', color: 'white', borderRadius: '50%', width: '34px', height: '34px', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                </div>
+
+                {/* PDF */}
+                {fileType === 'pdf' && (
+                    <div style={{ flex: 1, position: 'relative', borderRadius: '12px', overflow: 'hidden' }}>
+                        <div id={`preview-loading-${item.media_id}`} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', zIndex: 1, borderRadius: '12px' }}>
+                            <span style={{ fontSize: '2.5rem' }}>📄</span>
+                            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>Loading PDF…</span>
+                        </div>
+                        <iframe
+                            src={`https://drive.google.com/file/d/${item.drive_file_id}/preview`}
+                            style={{ width: '100%', height: '100%', border: 'none', borderRadius: '12px', position: 'relative', zIndex: 2 }}
+                            title={item.display_name}
+                            onLoad={() => { const el = document.getElementById(`preview-loading-${item.media_id}`); if (el) el.style.display = 'none'; }}
+                        />
+                    </div>
+                )}
+
+                {/* Text / Code */}
+                {fileType === 'text' && (
+                    <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', background: 'rgba(0,0,0,0.55)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        {textLoading ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '0.75rem', minHeight: '200px' }}>
+                                <div style={{ width: '32px', height: '32px', border: '3px solid rgba(255,255,255,0.1)', borderTop: '3px solid #a78bfa', borderRadius: '50%', animation: 'spin 0.9s linear infinite' }} />
+                                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem' }}>Loading file…</span>
+                            </div>
+                        ) : (
+                            <pre style={{ margin: 0, padding: '1.25rem 1.5rem', fontFamily: '"Fira Code", "Cascadia Code", Consolas, monospace', fontSize: '0.82rem', lineHeight: 1.75, color: '#e2e8f0', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                {textContent ?? '(empty file)'}
+                            </pre>
+                        )}
+                    </div>
+                )}
+
+                {/* Audio */}
+                {fileType === 'audio' && (
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem' }}>
+                        <div style={{ width: '150px', height: '150px', borderRadius: '50%', background: 'linear-gradient(135deg, #6d28d9, #a78bfa, #4c1d95)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '4rem', boxShadow: '0 20px 60px rgba(109,40,217,0.5)' }}>
+                            🎵
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                            <p style={{ color: 'white', fontWeight: 700, fontSize: '1rem', margin: '0 0 0.25rem' }}>{item.display_name || item.filename}</p>
+                            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem', margin: 0, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Audio File</p>
+                        </div>
+                        <iframe
+                            src={`https://drive.google.com/file/d/${item.drive_file_id}/preview`}
+                            style={{ width: '100%', maxWidth: '520px', height: '80px', border: 'none', borderRadius: '12px', background: 'rgba(0,0,0,0.4)' }}
+                            allow="autoplay"
+                            title={item.display_name}
+                        />
+                    </div>
+                )}
+            </div>
+        </div>,
+        document.body
+    );
 }
 
 // ── Audio Box ───────────────────────────────────────────────────
@@ -28,7 +117,7 @@ function AudioBox({ items = [], onUpload, onRecord, onRemove }) {
     const { onContentAudioPlay, onContentAudioStop } = useAudio();
     const [recording, setRecording] = useState(false);
     const [recTime, setRecTime] = useState(0);
-    const [playing, setPlaying] = useState(null); // stores media_id
+    const [playing, setPlaying] = useState(null);
     const audioRef = useRef(null);
     const mediaRec = useRef(null);
     const timerRef = useRef(null);
@@ -71,44 +160,32 @@ function AudioBox({ items = [], onUpload, onRecord, onRemove }) {
     const togglePlay = (item) => {
         const el = audioRef.current;
         if (!el) return;
-
-        // Clear any pending timeout
         clearTimeout(playTimeoutRef.current);
-
         if (playing === item.media_id) {
             el.pause();
             setPlaying(null);
             onContentAudioStop();
         } else {
             const streamUrl = getStreamableUrl(item.drive_link, 'download');
-            console.log('Audio Stream Source:', streamUrl);
-            
             setPlaying(item.media_id);
             el.src = streamUrl;
-
-            // ⚠️ Set a safety timeout: if it doesn't play in 3.5 seconds, it's likely stuck/broken
             playTimeoutRef.current = setTimeout(() => {
                 if (audioRef.current && audioRef.current.paused && playing !== item.media_id) {
-                     console.error('Audio playback timed out');
-                     setPlaying(null);
-                     setBrokenAudio(prev => new Set([...prev, item.media_id]));
+                    setPlaying(null);
+                    setBrokenAudio(prev => new Set([...prev, item.media_id]));
                 }
             }, 3500);
-
             el.play().then(() => {
-                clearTimeout(playTimeoutRef.current); // Success!
+                clearTimeout(playTimeoutRef.current);
                 onContentAudioPlay(el);
             }).catch(err => {
-                console.error('Audio Playback Error:', err);
                 clearTimeout(playTimeoutRef.current);
                 setPlaying(null);
                 setBrokenAudio(prev => new Set([...prev, item.media_id]));
             });
-
             el.onplaying = () => { clearTimeout(playTimeoutRef.current); };
             el.onended = () => { setPlaying(null); onContentAudioStop(); };
             el.onerror = () => {
-                console.error('Audio element reported an error loading source');
                 clearTimeout(playTimeoutRef.current);
                 setPlaying(null);
                 setBrokenAudio(prev => new Set([...prev, item.media_id]));
@@ -116,48 +193,35 @@ function AudioBox({ items = [], onUpload, onRecord, onRemove }) {
         }
     };
 
+    const confirmRemove = (item) => {
+        if (window.confirm(`Remove "${item.display_name || item.filename}" from this entry?`)) {
+            onRemove(item.media_id);
+        }
+    };
+
     return (
         <div className="media-box">
             <div className="media-box-title">🎙️ Audio</div>
-            
-            {/* Single hidden audio element */}
             <audio ref={audioRef} style={{ display: 'none' }} preload="metadata" />
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, overflowY: 'auto' }}>
                 {items.map(item => (
                     <div key={item.media_id} className="audio-bar">
                         {brokenAudio.has(item.media_id) ? (
-                            <div className="play-mini broken" title="Unplayable - use 'View' link" style={{ background: 'var(--surface2)', color: 'var(--danger)', opacity: 0.7 }}>
-                                🔇
-                            </div>
+                            <div className="play-mini broken" title="Unplayable" style={{ background: 'var(--surface2)', color: 'var(--danger)', opacity: 0.7 }}>🔇</div>
                         ) : (
-                            <button 
-                                className="play-mini" 
-                                onClick={() => togglePlay(item)}
-                                title="Play/Pause"
-                            >
+                            <button className="play-mini" onClick={() => togglePlay(item)} title="Play/Pause">
                                 {playing === item.media_id ? '⏸' : '▶'}
                             </button>
                         )}
                         <span className="audio-name" style={{ flex: 1 }}>{item.display_name || item.filename}</span>
-                        <a 
-                            href={item.drive_link} 
-                            target="_blank" 
-                            rel="noreferrer" 
-                            className="badge badge-ref" 
-                            style={{ textDecoration: 'none', cursor: 'alias' }}
-                            title="View original file in Google Drive"
-                        >
-                            ↗ View
-                        </a>
+                        <a href={item.drive_link} target="_blank" rel="noreferrer" className="badge badge-ref" style={{ textDecoration: 'none', cursor: 'alias' }} title="View in Google Drive">↗ View</a>
                         {onRemove && (
-                            <button 
-                                className="media-remove-btn-inline" 
-                                onClick={(e) => { e.stopPropagation(); onRemove(item.media_id); }}
-                                title="Remove from entry"
-                            >
-                                ×
-                            </button>
+                            <button
+                                className="media-remove-btn-inline"
+                                onClick={(e) => { e.stopPropagation(); confirmRemove(item); }}
+                                title="Delete"
+                                style={{ color: 'var(--danger, #ef4444)', fontWeight: 700, fontSize: '1rem' }}
+                            >✕</button>
                         )}
                     </div>
                 ))}
@@ -185,12 +249,23 @@ function AudioBox({ items = [], onUpload, onRecord, onRemove }) {
 function ImagesBox({ items = [], onUpload, onRemove }) {
     const [lb, setLb] = useState(null);
 
+    const confirmRemove = (mediaId, name) => {
+        if (window.confirm(`Remove "${name}" from this entry?`)) {
+            onRemove(mediaId);
+        }
+    };
+
     return (
         <div className="media-box">
             <div className="media-box-title">📷 Images</div>
             <div className="image-grid" style={{ flex: 1 }}>
                 {items.map((item, i) => (
-                    <SmartThumbnail key={item.media_id} item={item} onClick={() => setLb(i)} onRemove={onRemove} />
+                    <SmartThumbnail
+                        key={item.media_id}
+                        item={item}
+                        onClick={() => setLb(i)}
+                        onRemove={onRemove ? () => confirmRemove(item.media_id, item.display_name || item.filename) : undefined}
+                    />
                 ))}
                 {items.length === 0 && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', gridColumn: '1/-1' }}>No images yet</span>}
             </div>
@@ -205,11 +280,7 @@ function ImagesBox({ items = [], onUpload, onRemove }) {
                 </label>
             </div>
             {lb !== null && (
-                <Lightbox
-                    images={items}
-                    startIndex={lb}
-                    onClose={() => setLb(null)}
-                />
+                <Lightbox images={items} startIndex={lb} onClose={() => setLb(null)} />
             )}
         </div>
     );
@@ -217,26 +288,54 @@ function ImagesBox({ items = [], onUpload, onRemove }) {
 
 // ── Files Box ───────────────────────────────────────────────────
 function FilesBox({ items = [], onUpload, onRemove }) {
+    const [previewItem, setPreviewItem] = useState(null);
+
+    const confirmRemove = (item) => {
+        if (window.confirm(`Remove "${item.display_name || item.filename}" from this entry?`)) {
+            onRemove(item.media_id);
+        }
+    };
+
+    const isPreviewable = (item) => {
+        const t = classifyExtension(item.file_extension);
+        return t === 'pdf' || t === 'text' || t === 'audio';
+    };
+
     return (
         <div className="media-box">
             <div className="media-box-title">📎 Files</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, overflowY: 'auto' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, overflowY: 'auto' }}>
                 {items.map(item => (
                     <div key={item.media_id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                         <a href={item.drive_link} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', flex: 1 }}>
+                        {/* File card (click opens in Drive, unless previewable) */}
+                        <a href={item.drive_link} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', flex: 1 }}>
                             <div className="file-card">
                                 <span className="file-icon">{fileTypeIcon(item.file_extension)}</span>
                                 <span className="file-name">{item.display_name || item.filename}</span>
                             </div>
                         </a>
-                        {onRemove && (
-                            <button 
-                                className="media-remove-btn-inline" 
-                                onClick={(e) => { e.stopPropagation(); onRemove(item.media_id); }}
-                                title="Remove from entry"
+
+                        {/* Preview button for PDFs, text/code, audio */}
+                        {isPreviewable(item) && (
+                            <button
+                                onClick={() => setPreviewItem(item)}
+                                title="Preview"
+                                style={{ flexShrink: 0, background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.3)', color: '#a78bfa', borderRadius: '8px', padding: '3px 8px', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap', transition: 'all 0.15s' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(167,139,250,0.28)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(167,139,250,0.15)'; }}
                             >
-                                ×
+                                👁 View
                             </button>
+                        )}
+
+                        {/* Delete with confirmation */}
+                        {onRemove && (
+                            <button
+                                className="media-remove-btn-inline"
+                                onClick={(e) => { e.stopPropagation(); confirmRemove(item); }}
+                                title="Delete"
+                                style={{ flexShrink: 0, color: 'var(--danger, #ef4444)', fontWeight: 700, fontSize: '1rem' }}
+                            >✕</button>
                         )}
                     </div>
                 ))}
@@ -246,6 +345,8 @@ function FilesBox({ items = [], onUpload, onRemove }) {
                 ⬆ Upload
                 <input type="file" hidden onChange={e => onUpload && onUpload(e.target.files[0], 'file')} />
             </label>
+
+            {previewItem && <FilePreviewModal item={previewItem} onClose={() => setPreviewItem(null)} />}
         </div>
     );
 }

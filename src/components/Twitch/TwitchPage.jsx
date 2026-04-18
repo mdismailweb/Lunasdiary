@@ -27,7 +27,7 @@ function TwitchChannelCard({ ch, selected, onClick, onRemove }) {
     );
 }
 
-function TwitchVideoCard({ item, type, onPlay, onSave, onDismiss }) {
+function TwitchVideoCard({ item, type, onPlay, onSave, onDismiss, isLiked, onLike }) {
     const isLive = type === 'live';
     const isSaved = type === 'library';
     const isPending = type === 'pending';
@@ -53,7 +53,7 @@ function TwitchVideoCard({ item, type, onPlay, onSave, onDismiss }) {
     return (
         <div className={isPending ? "yt-pending-card" : "yt-video-card"} onClick={() => onPlay(channelName, videoId)} style={{ cursor: 'pointer' }}>
             <div className={isPending ? "yt-pending-link" : ""}>
-                <div className="yt-thumb-wrap" style={{ background: '#1a1a2e' }}>
+                <div className="yt-thumb-wrap" style={{ background: '#1a1a2e', position: 'relative' }}>
                     <img
                         src={getThumbnail(item.thumbnail_url || item.thumbnail)}
                         alt=""
@@ -63,6 +63,19 @@ function TwitchVideoCard({ item, type, onPlay, onSave, onDismiss }) {
                     />
                     {isLive && <span className="yt-ago" style={{ background: '#ff4655', color: '#fff' }}>LIVE</span>}
                     {!isLive && <span className="yt-ago">{timeAgo(item.created_at || item.published_at || item.saved_at)}</span>}
+                    {/* Like button */}
+                    <button
+                        onClick={e => { e.stopPropagation(); onLike(videoId || item.video_id || item.id); }}
+                        style={{
+                            position: 'absolute', top: '6px', right: '6px',
+                            background: isLiked ? 'rgba(239,68,68,0.85)' : 'rgba(0,0,0,0.55)',
+                            border: 'none', borderRadius: '50%', width: '28px', height: '28px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', fontSize: '12px', backdropFilter: 'blur(4px)', zIndex: 10
+                        }}
+                    >
+                        {isLiked ? '❤️' : '🤍'}
+                    </button>
                 </div>
                 <div className="yt-video-info">
                     <p className="yt-video-title">{item.title}</p>
@@ -135,25 +148,36 @@ export default function TwitchPage() {
     const [adding, setAdding] = useState(false);
 
     const [activePlayer, setActivePlayer] = useState({ channel: null, videoId: null });
-    const [activeTab, setActiveTab] = useState('live'); // mobile only: live | vods | library | streamers
+    const [activeTab, setActiveTab] = useState('live'); 
+    const [likedVideoIds, setLikedVideoIds] = useState(new Set());
+    const [likedVideosMap, setLikedVideosMap] = useState(new Map());
+    const [initialLoaded, setInitialLoaded] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
-    const loadSyncData = useCallback(async () => {
-        console.log('[Twitch] Loading data...');
-        setLoading(true);
+    const loadSyncData = useCallback(async (isSilent = false) => {
+        if (!isSilent && !initialLoaded) setLoading(true);
+        else setRefreshing(true);
+        
+        setError('');
         try {
-            const [chans, lib, data] = await Promise.all([
+            const [chans, lib, data, likedList] = await Promise.all([
                 api.getTwitchChannels(),
                 api.getSavedTwitchVideos(),
-                api.getTwitchData()
+                api.getTwitchData(),
+                api.getTwitchLiked().catch(e => [])
             ]);
-
-            console.log('[Twitch] Raw Res:', { chans, lib, data });
-
+            
             setChannels(Array.isArray(chans) ? chans : []);
             setLibrary(Array.isArray(lib) ? lib : []);
             setDismissed(new Set(data?.dismissed || []));
             setStreams(data?.streams || []);
             setVideos(data?.videos || []);
+            
+            const lMap = new Map();
+            const safeLiked = Array.isArray(likedList) ? likedList : [];
+            safeLiked.forEach(l => lMap.set(l.video_id, l));
+            setLikedVideosMap(lMap);
+            setLikedVideoIds(new Set(safeLiked.map(l => l.video_id)));
 
             if (data?.error) {
                 console.error('[Twitch] API Error:', data.error);
@@ -164,12 +188,21 @@ export default function TwitchPage() {
             setError('Failed to connect to Twitch API.');
         } finally {
             setLoading(false);
+            setRefreshing(false);
+            setInitialLoaded(true);
         }
-    }, []);
+    }, [initialLoaded]);
 
     useEffect(() => {
         loadSyncData();
     }, [loadSyncData]);
+
+    // Refresh data when switching channels to ensure we catch recent status
+    useEffect(() => {
+        if (selected && initialLoaded) {
+            loadSyncData(true);
+        }
+    }, [selected]); // eslint-disable-line
 
     const handleAdd = async (overrideQuery = null) => {
         const query = overrideQuery || addQuery;
@@ -192,7 +225,7 @@ export default function TwitchPage() {
             setChannels(prev => [...prev, newCh]);
             setAddQuery('');
             if (activeTab === 'streamers') setActiveTab('live');
-            loadSyncData(); // Refresh data for new channel
+            loadSyncData(true); // Refresh data for new channel
         } catch (err) {
             setError('Error adding channel.');
         } finally {
@@ -263,6 +296,36 @@ export default function TwitchPage() {
 
     const handlePlay = (ch, vid) => setActivePlayer({ channel: ch, videoId: vid });
 
+    const toggleLikeTwitch = async (vidId) => {
+        const isCurrentlyLiked = likedVideoIds.has(vidId);
+        setLikedVideoIds(prev => {
+            const next = new Set(prev);
+            isCurrentlyLiked ? next.delete(vidId) : next.add(vidId);
+            return next;
+        });
+
+        // Find metadata
+        const v = streams.find(s => String(s.id) === String(vidId)) || 
+                  videos.find(v => String(v.id) === String(vidId)) || 
+                  library.find(l => String(l.video_id || l.id) === String(vidId)) ||
+                  likedVideosMap.get(vidId);
+
+        try {
+            await api.toggleTwitchLiked({
+                video_id: vidId,
+                title: v?.title || 'Twitch Stream',
+                user_name: v?.user_name || v?.display_name || '',
+                thumbnail_url: v?.thumbnail_url || v?.thumbnail || ''
+            });
+        } catch (err) {
+            setLikedVideoIds(prev => {
+                const next = new Set(prev);
+                isCurrentlyLiked ? next.add(vidId) : next.delete(vidId);
+                return next;
+            });
+        }
+    };
+
     // Filter Logic - Using String() to avoid ID type mismatches (String vs Number)
     const filteredStreams = selected ? streams.filter(s => String(s.user_id) === String(selected)) : streams;
     const filteredLibrary = selected ? library.filter(v => String(v.user_id) === String(selected)) : library;
@@ -280,6 +343,7 @@ export default function TwitchPage() {
                     <button className={activeTab === 'live' ? 'active' : ''} onClick={() => setActiveTab('live')}>🔴 Live</button>
                     <button className={activeTab === 'vods' ? 'active' : ''} onClick={() => setActiveTab('vods')}>🎞️ VODs</button>
                     <button className={activeTab === 'library' ? 'active' : ''} onClick={() => setActiveTab('library')}>📚 Library</button>
+                    <button className={activeTab === 'liked' ? 'active' : ''} onClick={() => setActiveTab('liked')}>❤️ Liked</button>
                     <button className={activeTab === 'streamers' ? 'active' : ''} onClick={() => setActiveTab('streamers')}>📡 Streamers</button>
                 </div>
             </div>
@@ -303,16 +367,28 @@ export default function TwitchPage() {
                 </div>
                 {error && <p className="yt-error">{error}</p>}
 
-                {channels.length > 1 && (
-                    <button className={`yt-all-btn ${!selected ? 'active' : ''}`} onClick={() => setSelected(null)}>
-                        🌐 All Followed
-                    </button>
+                {channels.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '0.75rem 0' }}>
+                        <button 
+                            className={`yt-all-btn ${!selected && activeTab !== 'liked' ? 'active' : ''}`} 
+                            onClick={() => { setSelected(null); setActiveTab('live'); }}
+                        >
+                            🌐 All Followed
+                        </button>
+                        <button 
+                            className={`yt-all-btn ${activeTab === 'liked' ? 'active' : ''}`} 
+                            onClick={() => { setActiveTab('liked'); setSelected(null); }} 
+                            style={{ color: activeTab === 'liked' ? '#ef4444' : 'inherit' }}
+                        >
+                            ❤️ Liked Videos
+                        </button>
+                    </div>
                 )}
 
                 <div className="yt-channel-list">
                     {channels.map(ch => (
                         <TwitchChannelCard key={ch.id} ch={ch} selected={selected === ch.id}
-                            onClick={() => setSelected(ch.id)} onRemove={handleRemove} />
+                            onClick={() => { setSelected(ch.id); if (activeTab === 'liked') setActiveTab('live'); }} onRemove={handleRemove} />
                     ))}
                     {!loading && channels.length === 0 && (
                         <div className="empty-state" style={{ padding: '1.5rem 1rem' }}>
@@ -376,11 +452,17 @@ export default function TwitchPage() {
                     </div>
                 )}
 
+                {refreshing && (
+                    <div style={{ position: 'fixed', bottom: '1.5rem', right: '1.5rem', background: '#a970ff', color: 'white', padding: '0.5rem 1rem', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 600, boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: '8px', zIndex: 100 }}>
+                        <div className="spinner-sm" style={{ borderColor: 'rgba(255,255,255,0.3)', borderTopColor: 'white' }} /> Refreshing Twitch Data...
+                    </div>
+                )}
+
                 {!loading && (
                     <div className="fade-in">
-                        {/* 1. Live Now Section */}
-                        {activeTab === 'live' && (
-                            <div className="yt-pending-section" style={{ borderLeft: '4px solid #ff4655' }}>
+                        {/* 1. Live Now Section — Always show on desktop or when Live tab is picked */}
+                        {(activeTab === 'live' || activeTab === 'vods') && (
+                            <div className="yt-pending-section" style={{ borderLeft: '4px solid #ff4655', marginBottom: '2rem' }}>
                                 <div className="yt-pending-header">
                                     <span className="yt-pending-title" style={{ color: '#ff4655' }}>🔴 Live Now</span>
                                     <span className="yt-pending-count" style={{ background: '#ff4655' }}>{filteredStreams.length}</span>
@@ -393,10 +475,12 @@ export default function TwitchPage() {
                                             type="live"
                                             onPlay={handlePlay}
                                             onSave={handleSave}
+                                            isLiked={likedVideoIds.has(s.id)}
+                                            onLike={toggleLikeTwitch}
                                         />
                                     ))}
                                     {filteredStreams.length === 0 && (
-                                        <div className="empty-state" style={{ padding: '3rem' }}>
+                                        <div className="empty-state" style={{ padding: '2rem' }}>
                                             <span className="empty-emoji">💤</span>
                                             <p>No one is live right now.</p>
                                         </div>
@@ -405,8 +489,8 @@ export default function TwitchPage() {
                             </div>
                         )}
 
-                        {/* 2. VODs Section */}
-                        {activeTab === 'vods' && (
+                        {/* 2. VODs Section — Always show on desktop or when VODs tab is picked */}
+                        {(activeTab === 'vods' || activeTab === 'live') && (
                             <div className="yt-pending-section">
                                 <div className="yt-pending-header">
                                     <span className="yt-pending-title">🎞️ Recent Highlights</span>
@@ -421,6 +505,8 @@ export default function TwitchPage() {
                                             onPlay={handlePlay}
                                             onSave={handleSave}
                                             onDismiss={handleDismiss}
+                                            isLiked={likedVideoIds.has(v.id)}
+                                            onLike={toggleLikeTwitch}
                                         />
                                     ))}
                                     {pendingVideos.length === 0 && (
@@ -434,7 +520,7 @@ export default function TwitchPage() {
                         )}
 
                         {/* 3. Saved Library */}
-                        {(activeTab === 'library' || (activeTab === 'live' && filteredStreams.length === 0 && pendingVideos.length === 0)) && filteredLibrary.length > 0 && (
+                        {(activeTab === 'library' || (activeTab === 'live' && filteredStreams.length === 0 && pendingVideos.length === 0 && activeTab !== 'liked')) && filteredLibrary.length > 0 && (
                             <div className="yt-section">
                                 <div className="yt-approved-header">📚 Saved Library</div>
                                 <div className="yt-video-grid">
@@ -445,13 +531,48 @@ export default function TwitchPage() {
                                             type="library"
                                             onPlay={handlePlay}
                                             onSave={handleRemoveSaved}
+                                            isLiked={likedVideoIds.has(item.video_id || item.id)}
+                                            onLike={toggleLikeTwitch}
                                         />
                                     ))}
                                 </div>
                             </div>
                         )}
 
-                        {activeTab !== 'streamers' && filteredStreams.length === 0 && pendingVideos.length === 0 && filteredLibrary.length === 0 && channels.length > 0 && (
+                        {/* 4. Liked Section */}
+                        {activeTab === 'liked' && (
+                            <div className="yt-section">
+                                <div className="yt-approved-header" style={{ color: '#ef4444' }}>❤️ Liked Videos</div>
+                                {likedVideoIds.size === 0 ? (
+                                    <div className="empty-state" style={{ padding: '3rem' }}>
+                                        <span className="empty-emoji">🤍</span>
+                                        <p>No liked Twitch content yet. HEART your favorites to see them here.</p>
+                                    </div>
+                                ) : (
+                                    <div className="yt-video-grid">
+                                        {[...likedVideoIds].map(id => {
+                                            const v = streams.find(s => String(s.id) === String(id)) || 
+                                                      videos.find(vd => String(vd.id) === String(id)) ||
+                                                      library.find(l => String(l.video_id || l.id) === String(id)) ||
+                                                      likedVideosMap.get(id);
+                                            if (!v) return null;
+                                            return (
+                                                <TwitchVideoCard
+                                                    key={id}
+                                                    item={v}
+                                                    type="library"
+                                                    onPlay={handlePlay}
+                                                    isLiked={true}
+                                                    onLike={toggleLikeTwitch}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {activeTab !== 'streamers' && activeTab !== 'liked' && filteredStreams.length === 0 && pendingVideos.length === 0 && filteredLibrary.length === 0 && channels.length > 0 && (
                             <div className="empty-state" style={{ marginTop: '3rem' }}>
                                 <span className="empty-emoji">🎮</span>
                                 <p>No active streams or recent highlights found.</p>

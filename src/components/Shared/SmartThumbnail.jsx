@@ -40,6 +40,7 @@ export default function SmartThumbnail({ item, onClick, onRemove, className = "i
                 src={src} 
                 alt={item.filename} 
                 loading="lazy" 
+                referrerPolicy="no-referrer"
                 onError={handleError}
             />
             {onRemove && (

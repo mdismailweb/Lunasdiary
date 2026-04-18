@@ -33,6 +33,7 @@ function LightboxImage({ item, index }) {
             className="lightbox-img"
             src={src}
             alt={item.display_name || `Image ${index + 1}`}
+            referrerPolicy="no-referrer"
             onClick={e => e.stopPropagation()}
             onError={handleError}
             draggable={false}
@@ -186,6 +187,7 @@ export default function Lightbox({ images, startIndex = 0, onClose }) {
                             <img
                                 src={`https://drive.google.com/thumbnail?id=${(img.drive_link?.match(/\/d\/([^/]+)/) || img.drive_link?.match(/id=([^&/]+)/))?.[1]}&sz=w100`}
                                 alt={img.display_name}
+                                referrerPolicy="no-referrer"
                                 draggable={false}
                             />
                         </div>

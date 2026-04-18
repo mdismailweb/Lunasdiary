@@ -4,7 +4,7 @@
 // through this file. Set your deployment URL below.
 // ============================================================
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwMOtvlMBPyDw3U1k5JXdVzg9sGr0-fhW26IEJ9eCHKrvFAwwv1jCrWJ4BTtKNSgeDe/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyuJ4EeUZzbQEI738wSIEUd8ghJ_EvC2pDskyR9MAzaYtxy8A3nHJjySshLQRTWEj8b/exec';
 
 async function _call(action, params = {}) {
     console.log(`[API Request] ${action}`, params);
@@ -76,6 +76,10 @@ export const saveYTChannel = (params) => _call('saveYTChannel', params);
 export const removeYTChannel = (id) => _call('removeYTChannel', { id });
 export const getYTDismissed = () => _call('getYTDismissed');
 export const saveYTDismissed = (video_id) => _call('saveYTDismissed', { video_id });
+export const getYTLiked = () => _call('getYTLiked');
+export const toggleYTLiked = (params) => _call('toggleYTLiked', params);
+export const getTwitchLiked = () => _call('getTwitchLiked');
+export const toggleTwitchLiked = (params) => _call('toggleTwitchLiked', params);
 
 
 // ─── Vault ──────────────────────────────────────────────────
@@ -98,6 +102,7 @@ export const getLikedImages = () => _rawCall('getLikedImages');
 export const toggleLikedImage = (params) => _rawCall('toggleLikedImage', params);
 export const getFaceGroups = (folderId) => _rawCall('getFaceGroups', { folderId });
 export const saveFaceGroups = (folderId, groups) => _rawCall('saveFaceGroups', { folderId, groups });
+export const getFileTextContent = (fileId) => _call('getFileTextContent', { fileId });
 
 
 // ─── App Passwords ───────────────────────────────────────────

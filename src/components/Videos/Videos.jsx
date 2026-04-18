@@ -27,13 +27,31 @@ function ChannelCard({ ch, selected, onClick, onRemove }) {
     );
 }
 
-function VideoCard({ video, onPlay }) {
+function VideoCard({ video, onPlay, isLiked, onLike }) {
     const vidId = video.id || video.video_id;
     return (
         <div className="yt-video-card" onClick={() => onPlay(vidId)} style={{ cursor: 'pointer' }}>
-            <div className="yt-thumb-wrap">
+            <div className="yt-thumb-wrap" style={{ position: 'relative' }}>
                 <img src={video.thumbnail} alt={video.title} className="yt-thumb" />
                 <span className="yt-ago">{timeAgo(video.publishedAt || video.published_at)}</span>
+                {/* Like button */}
+                <button
+                    onClick={e => { e.stopPropagation(); onLike(vidId); }}
+                    title={isLiked ? 'Unlike' : 'Like'}
+                    style={{
+                        position: 'absolute', top: '6px', right: '6px',
+                        background: isLiked ? 'rgba(239,68,68,0.85)' : 'rgba(0,0,0,0.55)',
+                        border: 'none', borderRadius: '50%',
+                        width: '28px', height: '28px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', fontSize: '13px',
+                        backdropFilter: 'blur(4px)',
+                        transition: 'all 0.2s',
+                        boxShadow: isLiked ? '0 0 8px rgba(239,68,68,0.6)' : 'none'
+                    }}
+                >
+                    {isLiked ? '❤️' : '🤍'}
+                </button>
             </div>
             <div className="yt-video-info">
                 <p className="yt-video-title">{video.title}</p>
@@ -110,31 +128,83 @@ export default function Videos() {
     const [selected, setSelected] = useState(null);
     const [pending, setPending] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [initialLoaded, setInitialLoaded] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
     const [addQuery, setAddQuery] = useState('');
     const [adding, setAdding] = useState(false);
     const [error, setError] = useState('');
+    const [activeVideo, setActiveVideo] = useState(null);
+    const [activeTab, setActiveTab] = useState('feed');
 
-    const [activeVideo, setActiveVideo] = useState(null); // ID for the modal player
-    const [activeTab, setActiveTab] = useState('feed'); // mobile only: feed | saved | channels
+    // Liked videos — synced with backend
+    const [likedVideoIds, setLikedVideoIds] = useState(new Set());
+    const [likedVideosMap, setLikedVideosMap] = useState(new Map()); // stores full metadata for liked videos
+
+    const toggleLikeVideo = async (vidId) => {
+        // Optimistic UI
+        const isCurrentlyLiked = likedVideoIds.has(vidId);
+        setLikedVideoIds(prev => {
+            const next = new Set(prev);
+            isCurrentlyLiked ? next.delete(vidId) : next.add(vidId);
+            return next;
+        });
+
+        // Find video metadata for the backend
+        const v = pending.find(p => p.id === vidId) || library.find(l => (l.video_id || l.id) === vidId);
+        
+        try {
+            await api.toggleYTLiked({
+                video_id: vidId,
+                title: v?.title || '',
+                channel_title: v?.channelTitle || v?.channel_title || '',
+                thumbnail: v?.thumbnail || ''
+            });
+        } catch (err) {
+            // Revert on error
+            setLikedVideoIds(prev => {
+                const next = new Set(prev);
+                isCurrentlyLiked ? next.add(vidId) : next.delete(vidId);
+                return next;
+            });
+        }
+    };
 
     // Load initial data from Google Sheets
     const loadSyncData = useCallback(async () => {
         try {
+            // Fetch core data (these have existed longer)
             const [chans, ids, approvedList] = await Promise.all([
                 api.getYTChannels(),
                 api.getYTDismissed(),
                 api.getSavedVideos()
             ]);
-            setChannels(chans);
-            setDismissed(new Set(ids));
-            setLibrary(approvedList);
+            setChannels(chans || []);
+            setDismissed(new Set(ids || []));
+            setLibrary(approvedList || []);
+
+            // Fetch Liked list separately so it doesn't break the whole app if backend isn't updated
+            try {
+                const likedList = await api.getYTLiked();
+                if (likedList && Array.isArray(likedList)) {
+                    const likedMap = new Map();
+                    likedList.forEach(l => likedMap.set(l.video_id, l));
+                    setLikedVideosMap(likedMap);
+                    setLikedVideoIds(new Set(likedList.map(l => l.video_id)));
+                }
+            } catch (likedErr) {
+                console.warn('Liked videos sync failed (likely backend needs deployment):', likedErr);
+            }
         } catch (err) {
             console.error('Load sync error:', err);
+            setError('Failed to sync with Google Sheets. Please ensure you have DEPLOYED the latest Code.gs as a "New Deployment" in Apps Script.');
         }
     }, []);
 
     useEffect(() => {
-        loadSyncData().finally(() => setLoading(false));
+        loadSyncData().finally(() => {
+            setLoading(false);
+            setInitialLoaded(true);
+        });
     }, [loadSyncData]);
 
     const fetchVideos = useCallback(async (chans, sel, ignored, savedSet) => {
@@ -142,7 +212,11 @@ export default function Videos() {
             setPending([]);
             return;
         }
-        setLoading(true);
+        
+        // Only show skeletons on first load, otherwise use a background 'refreshing' state
+        if (!initialLoaded) setLoading(true);
+        else setRefreshing(true);
+        
         setError('');
         try {
             const targets = sel ? chans.filter(c => c.id === sel) : chans;
@@ -156,16 +230,17 @@ export default function Videos() {
             setError('Failed to load videos. Check your API key or network.');
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
-    }, []);
+    }, [initialLoaded]);
 
     // Re-fetch uploads when channels/selection/library IDs change
     useEffect(() => {
-        if (channels.length || !loading) {
-            const savedIds = new Set(library.map(v => v.video_id || v.id));
-            fetchVideos(channels, selected, dismissed, savedIds);
+        if ((channels && channels.length) || !loading) {
+            const savedIds = new Set((library || []).map(v => v.video_id || v.id));
+            fetchVideos(channels || [], selected, dismissed || new Set(), savedIds);
         }
-    }, [channels, selected, dismissed, library]); // eslint-disable-line
+    }, [channels, selected, dismissed, library, loading]); // eslint-disable-line
 
     const handleAdd = async () => {
         if (!addQuery.trim()) return;
@@ -258,7 +333,8 @@ export default function Videos() {
             <div className="vault-mobile-nav mobile-only" style={{ marginBottom: '1.25rem' }}>
                 <div className="vault-segments">
                     <button className={activeTab === 'feed' ? 'active' : ''} onClick={() => setActiveTab('feed')}>🔥 Feed</button>
-                    <button className={activeTab === 'saved' ? 'active' : ''} onClick={() => setActiveTab('saved')}>📚 Saved</button>
+                    <button className={activeTab === 'saved' ? 'active' : ''} onClick={() => setActiveTab('saved')}>📚 Library</button>
+                    <button className={activeTab === 'liked' ? 'active' : ''} onClick={() => setActiveTab('liked')}>❤️ Liked</button>
                     <button className={activeTab === 'channels' ? 'active' : ''} onClick={() => setActiveTab('channels')}>📡 Channels</button>
                 </div>
             </div>
@@ -281,10 +357,28 @@ export default function Videos() {
                     </button>
                 </div>
                 {error && <p className="yt-error">{error}</p>}
-                {channels.length > 1 && (
-                    <button className={`yt-all-btn ${!selected ? 'active' : ''}`} onClick={() => setSelected(null)}>
-                        🌐 All channels
-                    </button>
+                {channels.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '0.75rem 0' }}>
+                        <button 
+                            className={`yt-all-btn ${!selected && activeTab === 'feed' ? 'active' : ''}`} 
+                            onClick={() => { setSelected(null); setActiveTab('feed'); }}
+                        >
+                            🌐 All Feed
+                        </button>
+                        <button 
+                            className={`yt-all-btn ${activeTab === 'saved' ? 'active' : ''}`} 
+                            onClick={() => { setActiveTab('saved'); setSelected(null); }}
+                        >
+                            📚 Saved Library
+                        </button>
+                        <button 
+                            className={`yt-all-btn ${activeTab === 'liked' ? 'active' : ''}`} 
+                            onClick={() => { setActiveTab('liked'); setSelected(null); }} 
+                            style={{ color: activeTab === 'liked' ? '#ef4444' : 'inherit' }}
+                        >
+                            ❤️ Liked Videos
+                        </button>
+                    </div>
                 )}
                 <div className="yt-channel-list">
                     {channels.map(ch => (
@@ -355,6 +449,12 @@ export default function Videos() {
                     </div>
                 )}
 
+                {refreshing && (
+                    <div style={{ position: 'fixed', bottom: '1.5rem', right: '1.5rem', background: 'var(--primary)', color: 'white', padding: '0.5rem 1rem', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 600, boxShadow: '0 4px 12px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: '8px', zIndex: 100 }}>
+                        <div className="spinner-sm" /> Refreshing Feed...
+                    </div>
+                )}
+
                 {!loading && (
                     <div className="fade-in">
                         {/* Pending Approval section */}
@@ -378,19 +478,50 @@ export default function Videos() {
                             </div>
                         )}
 
-                        {/* Approved/Saved Library section */}
-                        {(activeTab === 'saved' || (activeTab === 'feed' && pending.length === 0)) && filteredLibrary.length > 0 && (
-                            <div className={pending.length > 0 ? 'yt-approved-section' : ''}>
-                                <div className="yt-approved-header">✅ Saved Library</div>
+                        {/* Saved Library Section — shows in the global 'All Feed' (below new) or as a dedicated Library tab */}
+                        {(activeTab === 'saved' || (activeTab === 'feed' && !selected)) && filteredLibrary.length > 0 && (
+                            <div className={pending.length > 0 && activeTab === 'feed' ? 'yt-approved-section' : ''} style={{ marginTop: activeTab === 'saved' ? 0 : '1.5rem' }}>
+                                <div className="yt-approved-header">📚 {activeTab === 'saved' ? 'Saved Library' : 'Saved from Library'}</div>
                                 <div className="yt-video-grid">
                                     {filteredLibrary.map(v => (
                                         <VideoCard
                                             key={v.video_id || v.id}
                                             video={v}
                                             onPlay={setActiveVideo}
+                                            isLiked={likedVideoIds.has(v.video_id || v.id)}
+                                            onLike={toggleLikeVideo}
                                         />
                                     ))}
                                 </div>
+                            </div>
+                        )}
+
+                        {/* Liked List Section — shows whenever tab is 'liked' */}
+                        {activeTab === 'liked' && (
+                            <div className="yt-approved-section">
+                                <div className="yt-approved-header">❤️ Favorite Videos</div>
+                                {likedVideoIds.size === 0 ? (
+                                    <div className="empty-state">
+                                        <span className="empty-emoji">🤍</span>
+                                        <p>No liked videos yet. Tap ❤️ on any video to save it here.</p>
+                                    </div>
+                                ) : (
+                                    <div className="yt-video-grid">
+                                        {[...likedVideoIds].map(id => {
+                                            const v = library.find(l => (l.video_id || l.id) === id) || likedVideosMap.get(id);
+                                            if (!v) return null;
+                                            return (
+                                                <VideoCard
+                                                    key={id}
+                                                    video={v}
+                                                    onPlay={setActiveVideo}
+                                                    isLiked={true}
+                                                    onLike={toggleLikeVideo}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
                         )}
 
