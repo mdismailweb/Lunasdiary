@@ -58,6 +58,10 @@ export default function InformationPage() {
                 const description = item.querySelector('description, summary, content')?.textContent || '';
                 const pubDate = item.querySelector('pubDate, published, updated, date')?.textContent || '';
                 
+                // Content:encoded usually has the full article HTML in RSS feeds
+                let fullContent = item.getElementsByTagName('content:encoded');
+                let htmlContent = fullContent.length > 0 ? fullContent[0].textContent : description;
+                
                 // Try to find an image
                 let image = '';
                 const enclosure = item.querySelector('enclosure[type^="image"]');
@@ -73,6 +77,7 @@ export default function InformationPage() {
                     title,
                     link,
                     snippet: snippet.slice(0, 180) + (snippet.length > 180 ? '...' : ''),
+                    fullHtml: htmlContent,
                     date: pubDate ? new Date(pubDate).toLocaleDateString() : 'Recent',
                     image
                 };
@@ -282,12 +287,12 @@ export default function InformationPage() {
                             </a>
                         </div>
                     </div>
-                    <iframe 
-                        src={activeArticle.link} 
-                        className="article-viewer-iframe"
-                        title={activeArticle.title}
-                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-                    />
+                    <div className="article-viewer-body">
+                        <div 
+                            className="article-reader-content fade-in" 
+                            dangerouslySetInnerHTML={{ __html: activeArticle.fullHtml }} 
+                        />
+                    </div>
                 </div>
             )}
 
