@@ -635,7 +635,7 @@ function initializeApp() {
       { id: 'rss-003', url: 'https://news.ycombinator.com/rss', name: 'Hacker News', category: 'Technology', icon: '🛡️' },
       { id: 'rss-004', url: 'https://feeds.arstechnica.com/arstechnica/index', name: 'Ars Technica', category: 'Technology', icon: '🧬' },
       { id: 'rss-005', url: 'https://www.nasa.gov/rss/dyn/breaking_news.rss', name: 'NASA Breaking News', category: 'Science', icon: '🚀' },
-      { id: 'rss-006', url: 'https://www.scientificamerican.com/section/rss/science/', name: 'Scientific American', category: 'Science', icon: '🔬' },
+      { id: 'rss-006', url: 'https://www.scientificamerican.com/rss/science/', name: 'Scientific American', category: 'Science', icon: '🔬' },
       { id: 'rss-007', url: 'https://www.nature.com/nature.rss', name: 'Nature', category: 'Science', icon: '🌿' },
       { id: 'rss-008', url: 'https://www.sciencedaily.com/rss/all.xml', name: 'ScienceDaily', category: 'Science', icon: '📊' }
     ];

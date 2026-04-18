@@ -48,9 +48,14 @@ export default function InformationPage() {
             
             const items = Array.from(xml.querySelectorAll('item, entry')).map(item => {
                 const title = item.querySelector('title')?.textContent || 'Untitled';
-                const link = item.querySelector('link')?.getAttribute('href') || item.querySelector('link')?.textContent || '#';
-                const description = item.querySelector('description, summary')?.textContent || '';
-                const pubDate = item.querySelector('pubDate, published, updated')?.textContent || '';
+                let link = '';
+                const linkElem = item.querySelector('link');
+                if (linkElem) {
+                    link = linkElem.getAttribute('href') || linkElem.textContent || '#';
+                }
+                
+                const description = item.querySelector('description, summary, content')?.textContent || '';
+                const pubDate = item.querySelector('pubDate, published, updated, date')?.textContent || '';
                 
                 // Try to find an image
                 let image = '';
