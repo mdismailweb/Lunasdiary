@@ -19,6 +19,7 @@ import FinancePage from './components/Finance/FinancePage';
 import BookmarksPage from './components/Bookmarks/BookmarksPage';
 import WritingPage from './components/Writing/WritingPage';
 import YearlyReviewPage from './components/YearlyReview/YearlyReviewPage';
+import StudyNotesPage from './components/StudyNotes/StudyNotesPage';
 import TwitchPage from './components/Twitch/TwitchPage';
 import DelegationPage from './components/Delegation/DelegationPage';
 import NotificationsPage from './components/Notifications/NotificationsPage';
@@ -102,6 +103,7 @@ export default function App() {
             case 'finance': return <FinancePage />;
             case 'bookmarks': return <BookmarksPage />;
             case 'writing': return <WritingPage />;
+            case 'studynotes': return <StudyNotesPage />;
             case 'yearlyreview': return <YearlyReviewPage />;
             case 'twitch': return <TwitchPage />;
             case 'delegation': return <DelegationPage />;

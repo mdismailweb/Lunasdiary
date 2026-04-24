@@ -4,7 +4,7 @@
 // through this file. Set your deployment URL below.
 // ============================================================
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyzo8JhcLcKuhY2f8QvS-vXGdwmJpkJ63uB9Vb-YuVLDy075_LTT34e50p8vtHk_kt6/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzsvG38AKrx-aOw1TxGgisGOH7yc8VkIAxFbGQHAeiB3sGzXS-XIu5jCeGNIVsXhtqI/exec';
 
 async function _call(action, params = {}) {
     console.log(`[API Request] ${action}`, params);
@@ -164,6 +164,17 @@ export const getWritings = () => _call('getWritings');
 export const saveWriting = (params) => _call('saveWriting', params);
 export const deleteWriting = (id) => _call('deleteWriting', { id });
 
+// ─── Study Notes ─────────────────────────────────────────────
+export const getStudyFolders = () => _call('getStudyFolders');
+export const createStudyFolder = (params) => _call('createStudyFolder', params);
+export const updateStudyFolder = (params) => _call('updateStudyFolder', params);
+export const deleteStudyFolder = (id) => _call('deleteStudyFolder', { id });
+export const getStudyNotes = (params) => _call('getStudyNotes', params);
+export const getAllStudyNotes = () => _call('getAllStudyNotes');
+export const createStudyNote = (params) => _call('createStudyNote', params);
+export const updateStudyNote = (params) => _call('updateStudyNote', params);
+export const deleteStudyNote = (id) => _call('deleteStudyNote', { id });
+
 // ─── Yearly Reviews ─────────────────────────────────────────
 export const getYearlyReviews = () => _call('getYearlyReviews');
 export const saveYearlyReview = (params) => _call('saveYearlyReview', params);
@@ -238,3 +249,14 @@ export function sanitizeDate(dateVal) {
 }
 
 export const todayStr = () => getLocalDate();
+
+export function getStreamableUrl(url, mode = 'view') {
+    if (!url) return '';
+    const match = url.match(/\/d\/([^/]+)/) || url.match(/id=([^&/]+)/);
+    if (!match) return url;
+    const id = match[1];
+    if (mode === 'preview') return `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
+    if (mode === 'large' || mode === 'view') return `https://drive.google.com/thumbnail?id=${id}&sz=w2000`;
+    // Fallback
+    return `https://drive.google.com/uc?id=${id}`;
+}

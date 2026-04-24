@@ -19,6 +19,7 @@ const TABS = [
     { id: 'finance', icon: '💳', label: 'Finance' },
     { id: 'bookmarks', icon: '❤️', label: 'Bookmarks' },
     { id: 'writing', icon: '✍️', label: 'Writing' },
+    { id: 'studynotes', icon: '📝', label: 'Study Notes' },
     { id: 'yearlyreview', icon: '🎆', label: 'Yearly Review' },
     { id: 'twitch', icon: '🎮', label: 'Twitch' },
     { id: 'delegation', icon: '🤝', label: 'Delegation' },

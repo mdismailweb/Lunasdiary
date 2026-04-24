@@ -44,7 +44,9 @@ var S = {
   LOGS: 'LOGS',
   YT_LIKED: 'YT_LIKED',
   TWITCH_LIKED: 'TWITCH_LIKED',
-  RSS_FEEDS: 'RSS_FEEDS'
+  RSS_FEEDS: 'RSS_FEEDS',
+  STUDY_FOLDERS: 'STUDY_FOLDERS',
+  STUDY_NOTES: 'STUDY_NOTES'
 };
 
 // Drive root folder name
@@ -254,6 +256,17 @@ function doPost(e) {
       case 'getRssFeeds':         result = getRssFeeds();                    break;
       case 'saveRssFeed':         result = saveRssFeed(params);              break;
       case 'removeRssFeed':       result = removeRssFeed(params);            break;
+
+      // ── Study Notes ──
+      case 'getStudyFolders':     result = getStudyFolders();                break;
+      case 'createStudyFolder':   result = createStudyFolder(params);        break;
+      case 'updateStudyFolder':   result = updateStudyFolder(params);        break;
+      case 'deleteStudyFolder':   result = deleteStudyFolder(params);        break;
+      case 'getStudyNotes':       result = getStudyNotes(params);            break;
+      case 'getAllStudyNotes':    result = getAllStudyNotes();               break;
+      case 'createStudyNote':     result = createStudyNote(params);          break;
+      case 'updateStudyNote':     result = updateStudyNote(params);          break;
+      case 'deleteStudyNote':     result = deleteStudyNote(params);          break;
 
       default:
         result = { error: 'Unknown action: ' + action };
@@ -470,6 +483,7 @@ function _sourceFolderName(uploadedFrom, mediaType) {
   }
   if (module === 'todo') return 'Todos';
   if (module === 'insight') return 'Insights';
+  if (module === 'studynotes' || module === 'studynotes_inline') return 'StudyNotes';
   return 'Journal/Files';
 }
 
@@ -565,6 +579,8 @@ function initializeApp() {
   sheetDefs[S.VAULT_FACES] = ['FolderID', 'GroupID', 'Label', 'CoverImageID', 'MemberImageIDs', 'CreatedAt'];
   sheetDefs[S.NOTIFICATIONS] = ['id', 'label', 'time', 'days', 'message', 'enabled', 'type', 'last_triggered', 'updatedAt'];
   sheetDefs[S.RSS_FEEDS]     = ['id', 'url', 'name', 'category', 'icon', 'added_at', 'updatedAt'];
+  sheetDefs[S.STUDY_FOLDERS] = ['folder_id', 'folder_name', 'parent_folder_id', 'color', 'icon', 'created_at', 'delete_status'];
+  sheetDefs[S.STUDY_NOTES]   = ['note_id', 'title', 'folder_id', 'content', 'tags', 'linked_notes', 'audio_urls', 'image_urls', 'file_urls', 'created_at', 'updated_at', 'delete_status'];
 
   var created = [];
   Object.keys(sheetDefs).forEach(function(name) {
@@ -1195,7 +1211,11 @@ function uploadMedia(params) {
 
   var folder   = _getFolderByPath(folderPath);
   var file     = folder.createFile(blob);
-  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  try {
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch (e) {
+    _log('WARN', 'Could not set sharing for file ' + file.getId() + ': ' + e.message);
+  }
 
   var fileId        = file.getId();
   var driveLink     = 'https://drive.google.com/file/d/' + fileId + '/view?usp=sharing';
@@ -1777,7 +1797,14 @@ function getImageBase64(params) {
 function getFileTextContent(params) {
   if (!params.fileId) throw new Error('fileId required');
   try {
-    var file = DriveApp.getFileById(params.fileId);
+    var mediaId = params.fileId;
+    var driveFileId = mediaId;
+    if (mediaId.indexOf('-') !== -1) {
+      var mediaRows = _sheetToObjects(S.MEDIA);
+      var row = mediaRows.find(function(r) { return r.media_id === mediaId; });
+      if (row && row.drive_file_id) driveFileId = row.drive_file_id;
+    }
+    var file = DriveApp.getFileById(driveFileId);
     var blob = file.getBlob();
     var content = blob.getDataAsString('UTF-8');
     // Truncate to protect against Apps Script response size limits
@@ -2677,3 +2704,66 @@ function removeRssFeed(params) {
   }
   return { success: true };
 }
+
+// ---------------------------------------------------------------
+// STUDY NOTES & FOLDERS
+// ---------------------------------------------------------------
+
+function getStudyFolders() {
+  return _sheetToObjects(S.STUDY_FOLDERS).filter(function(r) { return r.delete_status !== 'yes'; });
+}
+
+function createStudyFolder(params) {
+  if (!params.folder_id) params.folder_id = Utilities.getUuid();
+  params.created_at = _now();
+  _appendRow(S.STUDY_FOLDERS, params);
+  return params;
+}
+
+function updateStudyFolder(params) {
+  var id = params.folder_id;
+  delete params.folder_id;
+  _updateRow(S.STUDY_FOLDERS, 'folder_id', id, params);
+  return { success: true };
+}
+
+function deleteStudyFolder(params) {
+  var id = params.folder_id || params.id;
+  _updateRow(S.STUDY_FOLDERS, 'folder_id', id, { delete_status: 'yes' });
+  return { success: true };
+}
+
+function getAllStudyNotes() {
+  return _sheetToObjects(S.STUDY_NOTES).filter(function(r) { return r.delete_status !== 'yes'; });
+}
+
+function getStudyNotes(params) {
+  var rows = _sheetToObjects(S.STUDY_NOTES).filter(function(r) { return r.delete_status !== 'yes'; });
+  if (params.folder_id) {
+    rows = rows.filter(function(r) { return r.folder_id === params.folder_id; });
+  }
+  return rows;
+}
+
+function createStudyNote(params) {
+  if (!params.note_id) params.note_id = Utilities.getUuid();
+  params.created_at = _now();
+  params.updated_at = params.created_at;
+  _appendRow(S.STUDY_NOTES, params);
+  return params;
+}
+
+function updateStudyNote(params) {
+  var id = params.note_id;
+  var updates = Object.assign({}, params);
+  delete updates.note_id;
+  _updateRow(S.STUDY_NOTES, 'note_id', id, updates);
+  return { success: true };
+}
+
+function deleteStudyNote(params) {
+  var id = params.note_id || params.id;
+  _updateRow(S.STUDY_NOTES, 'note_id', id, { delete_status: 'yes' });
+  return { success: true };
+}
+
