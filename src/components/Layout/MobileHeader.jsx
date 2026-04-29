@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAudio } from '../../context/AudioContext';
+import { Disc } from 'lucide-react';
 
 /**
  * MobileHeader - Top Header for branding and status
@@ -21,9 +22,9 @@ export default function MobileHeader({ userName, isOffline, onMusicClick }) {
                     onClick={onMusicClick}
                     title="Music Player"
                     aria-label="Open music player"
-                    style={{ position: 'relative' }}
+                    style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
-                    <span className="disc-icon">💿</span>
+                    <Disc size={22} className="disc-icon" />
                     {playing && (
                         <span style={{
                             position: 'absolute', top: '2px', right: '2px',

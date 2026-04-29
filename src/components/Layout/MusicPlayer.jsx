@@ -1,5 +1,10 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useAudio, STATIONS } from '../../context/AudioContext';
+import { 
+    Play, Pause, X, Volume2, VolumeX, Disc, 
+    Coffee, Wind, Moon, Radio
+} from 'lucide-react';
+import '../../styles/MusicPlayer.css';
 
 // ── YouTube helpers ────────────────────────────────────────────
 const YT_IDS = ['1RcVIuZ8Wdk', 'PXpERbbAvBs', '0dcFWLV_OlI'];
@@ -12,10 +17,6 @@ function extractYTId(url) {
         if (u.hostname.includes('youtube.com')) return u.searchParams.get('v');
     } catch (_) { }
     return null;
-}
-
-function ytEmbedUrl(videoId) {
-    return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&loop=1&playlist=${videoId}&controls=0&rel=0&modestbranding=1`;
 }
 
 function loadYTApi() {
@@ -274,23 +275,31 @@ export default function MusicPlayer() {
 
     // ── Render ────────────────────────────────────────────────
     return (
-        <div className="music-player">
+        <div className="music-player-root">
             <audio ref={audioRef} playsInline />
             <div ref={ytDivRef} style={{ position: 'fixed', left: '-9999px', bottom: 0, width: '1px', height: '1px', pointerEvents: 'none' }} />
 
-            {/* Music Player Modal */}
             {showModal && (
                 <>
                     <div className="music-modal-overlay" onClick={closeModal} />
                     <div className="music-modal">
                         <div className="music-modal-header">
-                            <h2>🎵 Music Player</h2>
-                            <button className="music-modal-close" onClick={closeModal}>✕</button>
+                            <h2><Disc size={20} style={{ color: 'var(--accent)' }} /> Music Player</h2>
+                            <button className="music-modal-close" onClick={closeModal}>
+                                <X size={20} />
+                            </button>
                         </div>
 
                         <div className="music-modal-content">
-                            {/* Animated Disc */}
-                            <div className={`music-disc ${playing ? 'spinning' : ''}`}>💿</div>
+                            {/* Vinyl Record Visual */}
+                            <div className={`vinyl-container ${playing ? 'playing' : ''}`}>
+                                <div className={`vinyl-record ${playing ? 'spinning' : ''}`}>
+                                    <div className="vinyl-label">
+                                        {station.icon || '🎵'}
+                                    </div>
+                                    <div className="vinyl-center" />
+                                </div>
+                            </div>
 
                             {/* Track Info */}
                             <div className="music-track-info">
@@ -298,60 +307,62 @@ export default function MusicPlayer() {
                                 <div className="track-name">{trackName || station.desc}</div>
                             </div>
 
-                            {/* Play/Pause Button */}
-                            <button className="music-modal-play-btn" onClick={togglePlay}>
-                                {playing ? '⏸ Pause' : '▶ Play'}
-                            </button>
+                            {/* Main Controls */}
+                            <div className="music-controls">
+                                <button className="play-pause-btn" onClick={togglePlay}>
+                                    {playing ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" style={{ marginLeft: '4px' }} />}
+                                </button>
+                            </div>
 
-                            {/* Volume Control */}
-                            <div className="music-volume-control">
-                                <label>Volume</label>
-                                <div className="volume-row">
-                                    <button className="mute-btn" onClick={toggleMute}>
-                                        {muted || volume === 0 ? '🔇' : volume < 0.4 ? '🔉' : '🔊'}
+                            {/* Volume Section */}
+                            <div className="volume-control-box">
+                                <div className="volume-header">
+                                    <span>Volume</span>
+                                    <span>{Math.round((muted ? 0 : volume) * 100)}%</span>
+                                </div>
+                                <div className="volume-slider-container">
+                                    <button style={{ color: 'var(--text-muted)' }} onClick={toggleMute}>
+                                        {muted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
                                     </button>
                                     <input 
                                         type="range" 
-                                        className="volume-slider" 
+                                        className="music-vol-slider" 
                                         min="0" 
                                         max="1" 
                                         step="0.01"
                                         value={muted ? 0 : volume} 
                                         onChange={onVolumeChange} 
                                     />
-                                    <span className="volume-percent">{Math.round((muted ? 0 : volume) * 100)}%</span>
                                 </div>
                             </div>
 
-                            {/* Station Selector */}
-                            <div className="music-stations">
-                                <label>Station</label>
+                            {/* Station Selection */}
+                            <div className="stations-section">
+                                <h3>Stations</h3>
                                 <div className="stations-grid">
                                     {STATIONS.map(st => (
                                         <button
                                             key={st.id}
-                                            className={`station-btn ${st.id === station.id ? 'active' : ''}`}
+                                            className={`station-card ${st.id === station.id ? 'active' : ''}`}
                                             onClick={() => handleStation(st)}
                                         >
-                                            <span className="station-icon">{st.icon}</span>
-                                            <span className="station-name">{st.label}</span>
+                                            <span className="st-icon">{st.icon}</span>
+                                            <div className="st-info">
+                                                <span className="st-name">{st.label}</span>
+                                            </div>
                                         </button>
                                     ))}
                                 </div>
 
-                                {/* Radio URL Input */}
                                 {station.id === 'radio' && (
-                                    <div className="radio-input-section">
+                                    <div className="radio-custom-input">
                                         <input
-                                            className="radio-url-input"
-                                            placeholder="Paste YouTube or stream URL…"
+                                            placeholder="Paste YouTube URL…"
                                             value={radioInput}
                                             onChange={e => setRadioInput(e.target.value)}
                                             onKeyDown={e => e.key === 'Enter' && applyRadioUrl()}
                                         />
-                                        <button className="radio-url-btn" onClick={applyRadioUrl}>
-                                            Set URL
-                                        </button>
+                                        <button onClick={applyRadioUrl}>Set</button>
                                     </div>
                                 )}
                             </div>

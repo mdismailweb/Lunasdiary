@@ -1,4 +1,5 @@
 import { useAudio } from '../../context/AudioContext';
+import { Disc, Settings } from 'lucide-react';
 
 const TABS = [
     { id: 'dashboard', icon: '🌸', label: 'Dashboard' },
@@ -74,9 +75,11 @@ export default function Sidebar({ active, onNavigate, userName, isOffline, onPre
                         onClick={onMusicClick}
                         title="Music Player"
                     >
-                        💿
+                        <Disc size={22} />
                     </button>
-                    <button className="settings-btn" title="Settings">⚙️</button>
+                    <button className="settings-btn" title="Settings">
+                        <Settings size={18} />
+                    </button>
                 </div>
             </div>
         </aside>
